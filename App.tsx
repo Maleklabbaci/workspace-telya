@@ -2,7 +2,6 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import ProjectsList from './pages/ProjectsList';
 import ProjectDetail from './pages/ProjectDetail';
@@ -20,6 +19,7 @@ import AdminInvoices from './pages/AdminInvoices';
 import AdminSettings from './pages/AdminSettings';
 import CoordinatorDashboard from './pages/CoordinatorDashboard';
 import Profile from './pages/Profile';
+import DeliverableReview from './pages/DeliverableReview';
 
 function App() {
 
@@ -27,7 +27,6 @@ function App() {
     <HashRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
         
         {/* Admin Routes */}
         <Route 
@@ -66,7 +65,7 @@ function App() {
         <Route 
           path="/" 
           element={
-            <ProtectedRoute roles={['project_manager', 'employee', 'admin']}>
+            <ProtectedRoute roles={['project_manager', 'employee', 'admin', 'coordinator']}>
               <Layout />
             </ProtectedRoute>
           }
@@ -75,6 +74,7 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="projects" element={<ProjectsList />} />
           <Route path="projects/:id" element={<ProjectDetail />} />
+          <Route path="projects/:projectId/deliverables/:deliverableId" element={<DeliverableReview />} />
           <Route path="tasks" element={<MyTasks />} />
           <Route path="profile" element={<Profile />} />
         </Route>
@@ -90,6 +90,7 @@ function App() {
         >
             <Route index element={<Navigate to="/client/dashboard" replace />} />
             <Route path="dashboard" element={<ClientDashboard />} />
+            <Route path="projects/:projectId/deliverables/:deliverableId" element={<DeliverableReview />} />
         </Route>
 
 

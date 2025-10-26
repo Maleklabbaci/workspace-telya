@@ -9,8 +9,7 @@ import ClientDeliverableCard from '../components/ClientDeliverableCard';
 import Tabs from '../components/ui/Tabs';
 import Toast from '../components/ui/Toast';
 import { Plus } from 'lucide-react';
-// FIX: Correctly import saveProjects and saveDeliverables
-import { getProjects, getTasks, getDeliverables, saveProjects, saveDeliverables } from '../data/api';
+import { getProjects, getTasks, getDeliverables, createProject, updateDeliverable, getUsers, createNotification } from '../data/api';
 import dayjs from 'dayjs';
 
 const ClientDashboard: React.FC = () => {
@@ -23,7 +22,6 @@ const ClientDashboard: React.FC = () => {
     const [isNewRequestModalOpen, setIsNewRequestModalOpen] = useState(false);
     const [showToast, setShowToast] = useState(false);
 
-    // FIX: Make loadClientData async and await API calls
     const loadClientData = async (currentUser: User) => {
         const allProjects = await getProjects();
         const clientProjects = allProjects.filter(p => p.client_id === currentUser.id);
@@ -44,26 +42,20 @@ const ClientDashboard: React.FC = () => {
         }
     }, []);
     
-    // FIX: Make handleNewRequest async
     const handleNewRequest = async ({ requestType, description, deadline }: { requestType: string; description: string; deadline: string }) => {
         if (!user) return;
         
-        const newProject: Project = {
-            id: `proj-req-${Date.now()}`,
+        const newProjectData = {
             client_id: user.id,
             title: `Demande: ${requestType}`,
             description: description,
-            pack: 'Essai', // Default pack for requests
+            pack: 'Essai' as Project['pack'],
             start_date: dayjs().format('YYYY-MM-DD'),
             due_date: deadline || dayjs().add(1, 'month').format('YYYY-MM-DD'),
-            status: 'draft',
-            percent_complete: 0,
-            updated_at: new Date().toISOString(),
+            status: 'draft' as Project['status'],
         };
 
-        const allProjects = await getProjects();
-        // FIX: Await saveProjects
-        await saveProjects([...allProjects, newProject]);
+        await createProject(newProjectData);
         
         // Refresh the project list from the source of truth
         await loadClientData(user);
@@ -78,17 +70,29 @@ const ClientDashboard: React.FC = () => {
         setIsTasksModalOpen(true);
     };
 
-    // FIX: Make handleApproveDeliverable async
     const handleApproveDeliverable = async (deliverableId: string) => {
-        const allDeliverables = await getDeliverables();
-        const updatedDeliverables = allDeliverables.map(d => 
-            d.id === deliverableId ? { ...d, status: 'approved' as 'approved' } : d
-        );
-        // FIX: Await saveDeliverables
-        await saveDeliverables(updatedDeliverables);
+        const updatedDeliverable = await updateDeliverable(deliverableId, { status: 'approved' });
         setDeliverables(prev => 
-            prev.map(d => d.id === deliverableId ? { ...d, status: 'approved' } : d)
+            prev.map(d => d.id === deliverableId ? updatedDeliverable : d)
         );
+
+        // Notify relevant internal team members
+        const relevantProject = projects.find(p => p.id === updatedDeliverable.project_id);
+        if (relevantProject && user) {
+            // In a real app, projects would have assigned managers. For now, we notify the first admin/PM.
+            const allUsers = await getUsers();
+            const adminOrPM = allUsers.find(u => ['admin', 'project_manager'].includes(u.role));
+
+            if (adminOrPM) {
+                await createNotification({
+                    user_id: adminOrPM.id,
+                    actor_id: user.id,
+                    project_id: relevantProject.id,
+                    message: `Le client <strong>${user.company || user.name}</strong> a approuvé le livrable "${updatedDeliverable.title}".`,
+                    link_to: `/projects/${relevantProject.id}`
+                });
+            }
+        }
     };
     
     const projectTasks = selectedProject ? tasks.filter(t => t.project_id === selectedProject.id) : [];

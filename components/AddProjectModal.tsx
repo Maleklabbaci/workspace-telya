@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Project, User, ProjectStatus } from '../types';
 import Modal from './ui/Modal';
@@ -7,8 +8,7 @@ import Button from './ui/Button';
 import Toast from './ui/Toast';
 import Textarea from './ui/Textarea';
 import { X } from 'lucide-react';
-// FIX: Correctly import saveProjects
-import { getUsers, getProjects, saveProjects } from '../data/api';
+import { getUsers, createProject, updateProject } from '../data/api';
 
 interface AddProjectModalProps {
   isOpen: boolean;
@@ -33,7 +33,6 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
     });
     
     useEffect(() => {
-        // FIX: Fetch clients asynchronously
         const fetchClients = async () => {
             const allUsers = await getUsers();
             setClients(allUsers.filter(u => u.role === 'client'));
@@ -41,20 +40,19 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
         
         if (isOpen) {
             fetchClients();
-        }
-
-        if (isEditing && projectToEdit) {
-            setFormState({
-                title: projectToEdit.title,
-                description: projectToEdit.description,
-                client_id: projectToEdit.client_id,
-                pack: projectToEdit.pack,
-                start_date: projectToEdit.start_date,
-                due_date: projectToEdit.due_date,
-                status: projectToEdit.status,
-            });
-        } else {
-             resetForm();
+            if (isEditing && projectToEdit) {
+                setFormState({
+                    title: projectToEdit.title,
+                    description: projectToEdit.description,
+                    client_id: projectToEdit.client_id,
+                    pack: projectToEdit.pack,
+                    start_date: projectToEdit.start_date,
+                    due_date: projectToEdit.due_date,
+                    status: projectToEdit.status,
+                });
+            } else {
+                 resetForm();
+            }
         }
     }, [projectToEdit, isEditing, isOpen]);
     
@@ -81,7 +79,6 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
         onClose();
     };
 
-    // FIX: Make handleSubmit async to handle API calls
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -90,37 +87,28 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
             setError('Veuillez sélectionner un client.');
             return;
         }
-
-        // FIX: Await project data
-        const storedProjects = await getProjects();
         
-        if (isEditing && projectToEdit) {
-            const updatedProject: Project = { ...projectToEdit, ...formState };
-            const projectIndex = storedProjects.findIndex(p => p.id === projectToEdit.id);
-            if (projectIndex !== -1) {
-                storedProjects[projectIndex] = updatedProject;
+        try {
+            if (isEditing && projectToEdit) {
+                const updates = { ...formState };
+                await updateProject(projectToEdit.id, updates);
             } else {
-                 storedProjects.push(updatedProject);
+                const newProjectData = {
+                    ...formState,
+                    percent_complete: 0,
+                    updated_at: new Date().toISOString(),
+                };
+                await createProject(newProjectData);
             }
-            // FIX: Await saving projects
-            await saveProjects(storedProjects);
-
-        } else {
-            const newProject: Project = {
-                id: `proj-${Date.now()}`,
-                ...formState,
-                percent_complete: 0,
-                updated_at: new Date().toISOString(),
-            };
-            // FIX: Await saving projects
-            await saveProjects([...storedProjects, newProject]);
+            
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
+            
+            onProjectAdded();
+            handleClose();
+        } catch (err: any) {
+            setError(err.message || "Une erreur est survenue.");
         }
-        
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
-        
-        onProjectAdded();
-        handleClose();
     };
 
   return (

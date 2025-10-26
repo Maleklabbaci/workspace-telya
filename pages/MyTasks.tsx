@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Task, User, Project, TaskStatus } from '../types';
 import Card from '../components/ui/Card';
 import dayjs from 'dayjs';
 import { Calendar, Folder } from 'lucide-react';
-// FIX: Import from API instead of mock data
 import { getProjects, getTasks } from '../data/api';
 
 const statusStyles: { [key in TaskStatus]: { bg: string; text: string; border: string } } = {
@@ -44,11 +44,9 @@ const TaskItem: React.FC<{ task: Task; project?: Project }> = ({ task, project }
 
 const MyTasks: React.FC = () => {
     const currentUser: User | null = JSON.parse(localStorage.getItem('telya_user') || 'null');
-    // FIX: Add state for tasks and projects
     const [myTasks, setMyTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
 
-    // FIX: Fetch data asynchronously
     useEffect(() => {
         const fetchData = async () => {
             if (currentUser) {

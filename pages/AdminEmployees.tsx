@@ -4,18 +4,15 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AddUserModal from '../components/AddUserModal';
 import { User, Task } from '../types';
-// FIX: Correctly import saveUsers
-import { getUsers, getTasks, saveUsers } from '../data/api';
+import { getUsers, getTasks, deleteUser } from '../data/api';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 
 const AdminEmployees: React.FC = () => {
     const [employees, setEmployees] = useState<User[]>([]);
-    // FIX: Add state for tasks to use in getTaskCount
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
 
-    // FIX: Load both employees and tasks asynchronously
     const loadData = async () => {
         const allUsers = await getUsers();
         setEmployees(allUsers.filter(u => ['employee', 'project_manager', 'admin', 'coordinator'].includes(u.role)));
@@ -28,7 +25,6 @@ const AdminEmployees: React.FC = () => {
     }, []);
 
     const getTaskCount = (employeeId: string) => {
-        // FIX: Use tasks from state
         return tasks.filter(t => t.assigned_to === employeeId).length;
     };
     
@@ -37,13 +33,9 @@ const AdminEmployees: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    // FIX: Make handleDelete async
     const handleDelete = async (userId: string) => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.')) {
-            const allUsers = await getUsers();
-            const updatedUsers = allUsers.filter(u => u.id !== userId);
-            // FIX: Await saveUsers
-            await saveUsers(updatedUsers);
+            await deleteUser(userId);
             loadData();
         }
     };

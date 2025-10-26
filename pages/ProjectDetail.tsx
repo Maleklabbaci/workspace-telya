@@ -1,6 +1,5 @@
 
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Project, Task, Deliverable, Comment, User, TaskComment } from '../types';
 import Spinner from '../components/ui/Spinner';
@@ -15,7 +14,7 @@ import 'dayjs/locale/fr';
 import { Clock, BarChart2, Users } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { 
-  getProjects,
+  getProjectById,
   getTasks,
   getDeliverables,
   getComments,
@@ -25,6 +24,8 @@ import {
   createTaskComment,
   createComment,
   createDeliverable,
+  createNotification,
+  uploadDeliverableFile,
 } from '../data/api';
 
 
@@ -140,7 +141,7 @@ const ChatTab: React.FC<{ comments: Comment[], currentUser: User, onAddComment: 
 };
 
 const ProjectDetail: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [client, setClient] = useState<User | undefined>(undefined);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -153,44 +154,58 @@ const ProjectDetail: React.FC = () => {
   
   const currentUser = JSON.parse(localStorage.getItem('telya_user') || '{}');
 
-  // FIX: Make useEffect async and await all API calls
-  useEffect(() => {
-    const fetchData = async () => {
-      const allProjects = await getProjects();
-      const projectData = allProjects.find(p => p.id === id);
+  const fetchData = useCallback(async () => {
+    if (!id) return;
 
-      if (projectData) {
-        const allUsers = await getUsers();
+    const projectData = await getProjectById(id);
+    if (projectData) {
         setProject(projectData);
+        
+        const allUsers = await getUsers();
         setClient(allUsers.find(u => u.id === projectData.client_id));
+        setProjectMembers(allUsers.filter(u => u.role !== 'client'));
 
         const allTasks = await getTasks();
         const projectTasks = allTasks.filter(t => t.project_id === id);
         setTasks(projectTasks);
-
+        
         const allDeliverables = await getDeliverables();
         setDeliverables(allDeliverables.filter(d => d.project_id === id));
         
         const allComments = await getComments();
         setComments(allComments.filter(c => c.project_id === id));
-
+        
         const allTaskComments = await getTaskComments();
         const projectTaskIds = new Set(projectTasks.map(t => t.id));
         setTaskComments(allTaskComments.filter(c => projectTaskIds.has(c.task_id)));
-        
-        setProjectMembers(allUsers.filter(u => u.role !== 'client'));
-      }
-    };
-    fetchData();
+    }
   }, [id]);
 
-  // FIX: Make handler async and use updateTask API
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   const handleAssignTask = async (taskId: string, userId: string | null) => {
-    const updatedTasks = tasks.map(task =>
-        task.id === taskId ? { ...task, assigned_to: userId ?? undefined } : task
-    );
-    setTasks(updatedTasks);
-    await updateTask(taskId, { assigned_to: userId ?? undefined });
+    const taskToUpdate = tasks.find(t => t.id === taskId);
+    if (!taskToUpdate) return;
+    
+    const oldAssigneeId = taskToUpdate.assigned_to;
+    const updated = await updateTask(taskId, { assigned_to: userId ?? undefined });
+    setTasks(currentTasks => currentTasks.map(t => t.id === taskId ? updated : t));
+    
+    // Create notification for the new assignee
+    if (userId && userId !== oldAssigneeId) {
+        const newAssignee = projectMembers.find(member => member.id === userId);
+        if (newAssignee) {
+            await createNotification({
+                user_id: userId,
+                actor_id: currentUser.id,
+                project_id: project?.id,
+                message: `<strong>${currentUser.name}</strong> vous a assigné la tâche "${updated.title}".`,
+                link_to: `/projects/${project?.id}`
+            });
+        }
+    }
   };
   
   const handleSelectTask = (task: Task) => {
@@ -201,63 +216,62 @@ const ProjectDetail: React.FC = () => {
       setSelectedTask(null);
   }
 
-  // FIX: Make handler async and use updateTask API
   const handleUpdateTask = async (updatedTask: Task) => {
-    const updatedTasks = tasks.map(task => task.id === updatedTask.id ? updatedTask : task);
-    setTasks(updatedTasks);
-    await updateTask(updatedTask.id, updatedTask);
+    const updated = await updateTask(updatedTask.id, updatedTask);
+    setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updated : t));
     
-    // If the task being updated is the one that was assigned, update the main task list too
-    if (updatedTask.id === selectedTask?.id) {
-        handleAssignTask(updatedTask.id, updatedTask.assigned_to || null);
+    // Also update the task in the modal if it's open
+    if (selectedTask?.id === updated.id) {
+        setSelectedTask(updated);
     }
   };
   
-  // FIX: Make handler async and use createTaskComment API
   const handleAddTaskComment = async (taskId: string, content: string) => {
-      const newCommentData: Omit<TaskComment, 'id'> = {
+      const newCommentData: Omit<TaskComment, 'id' | 'created_at'> = {
           task_id: taskId,
           content,
           user_id: currentUser.id,
           user_name: currentUser.name,
           user_avatar: currentUser.avatar_url || `https://i.pravatar.cc/150?u=${currentUser.id}`,
-          created_at: new Date().toISOString(),
       };
       const newComment = await createTaskComment(newCommentData);
       setTaskComments(prev => [...prev, newComment]);
   }
 
-  // FIX: Make handler async and use createComment API
   const handleAddProjectComment = async (content: string) => {
     if (!project) return;
-    const newCommentData: Omit<Comment, 'id'> = {
+    const newCommentData: Omit<Comment, 'id' | 'created_at'> = {
       project_id: project.id,
       user_id: currentUser.id,
       user_name: currentUser.name,
       user_avatar: currentUser.avatar_url || `https://i.pravatar.cc/150?u=${currentUser.id}`,
       content: content,
       visibility: 'public', // Default to public for this example
-      created_at: new Date().toISOString(),
     };
     const newComment = await createComment(newCommentData);
     setComments(prev => [...prev, newComment]);
   };
 
-  // FIX: Make handler async and use createDeliverable API
-  const handleUploadDeliverable = async (title: string, fileName: string) => {
+  const handleUploadDeliverable = async (title: string, file: File) => {
     if (!project) return;
-    const newDeliverableData: Omit<Deliverable, 'id'> = {
-        project_id: project.id,
-        title,
-        type: fileName.endsWith('.mp4') || fileName.endsWith('.mov') ? 'video' : (fileName.endsWith('.jpg') || fileName.endsWith('.png') ? 'photo' : 'design'),
-        status: 'in_review',
-        storage_url: '#', // mock url
-        version: deliverables.filter(d => d.title.startsWith(title)).length + 1,
-        uploaded_by: currentUser.id,
-        uploaded_at: new Date().toISOString(),
-    };
-    const newDeliverable = await createDeliverable(newDeliverableData);
-    setDeliverables(prev => [newDeliverable, ...prev]);
+    try {
+        const storageUrl = await uploadDeliverableFile(file, project.id);
+        
+        const newDeliverableData: Omit<Deliverable, 'id' | 'uploaded_at'> = {
+            project_id: project.id,
+            title,
+            type: file.type.startsWith('video') ? 'video' : (file.type.startsWith('image') ? 'photo' : 'design'),
+            status: 'in_review',
+            storage_url: storageUrl,
+            version: deliverables.filter(d => d.title.startsWith(title)).length + 1,
+            uploaded_by: currentUser.id,
+        };
+        const newDeliverable = await createDeliverable(newDeliverableData);
+        setDeliverables(prev => [newDeliverable, ...prev]);
+    } catch (error) {
+        console.error("Failed to upload deliverable:", error);
+        // You could add a user-facing error message here
+    }
   };
 
 

@@ -8,24 +8,22 @@ import { Download, CheckCircle, Send, Plus } from 'lucide-react';
 import dayjs from 'dayjs';
 
 const AdminInvoices: React.FC = () => {
-    // FIX: Use state to store asynchronously fetched data
-    const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
-    const [allProjects, setAllProjects] = useState<Project[]>([]);
-    const [allUsers, setAllUsers] = useState<User[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
 
-    // FIX: Fetch data inside useEffect
     useEffect(() => {
         const loadData = async () => {
-            setAllInvoices(await getInvoices());
-            setAllProjects(await getProjects());
-            setAllUsers(await getUsers());
+            setInvoices(await getInvoices());
+            setProjects(await getProjects());
+            setUsers(await getUsers());
         };
         loadData();
     }, []);
 
     const getProjectAndClient = (projectId: string): { project: Project | undefined, client: User | undefined } => {
-        const project = allProjects.find(p => p.id === projectId);
-        const client = project ? allUsers.find(u => u.id === project.client_id) : undefined;
+        const project = projects.find(p => p.id === projectId);
+        const client = project ? users.find(u => u.id === project.client_id) : undefined;
         return { project, client };
     };
 
@@ -64,7 +62,7 @@ const AdminInvoices: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                            {allInvoices.map(invoice => {
+                            {invoices.map(invoice => {
                                 const { project, client } = getProjectAndClient(invoice.project_id);
                                 return (
                                 <tr key={invoice.id} className="hover:bg-accent">

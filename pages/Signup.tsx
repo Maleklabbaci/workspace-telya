@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -8,26 +9,129 @@ import { Building, Users, ArrowLeft } from 'lucide-react';
 import TelyaLogo from '../components/TelyaLogo';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabaseClient';
-import { getUsers } from '../data/api';
 
 const teamRoles = [
     { value: 'Designer', label: '🎨 Designer', role: 'employee' },
-    { value: 'Filmmaker', label: '🎥 Réalisateur', role: 'employee' },
+    { value: 'Filmmaker/Photographer', label: '🎥 Réalisateur/Photographe', role: 'employee' },
     { value: 'Video Editor', label: '🎬 Monteur Vidéo', role: 'employee' },
-    { value: 'Developpeur', label: '💻 Développeur', role: 'employee' },
+    { value: 'Développeur Web', label: '💻 Développeur Web', role: 'employee' },
+    { value: 'Community Manager', label: '📱 Community Manager', role: 'employee' },
     { value: 'Commercial', label: '💼 Commercial', role: 'employee' },
     { value: 'Coordinateur', label: '🧠 Coordinateur', role: 'coordinator' },
+    { value: 'Project Manager', label: '📋 Chef de Projet', role: 'project_manager' },
     { value: 'Admin', label: '👑 Admin', role: 'admin' },
 ];
 
 
+interface SelectionScreenProps {
+  onSelectUserType: (type: 'client' | 'team') => void;
+}
+
+const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelectUserType }) => (
+    <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-center"
+    >
+        <h2 className="text-2xl font-semibold mb-6 text-foreground">Rejoindre Telya</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <button onClick={() => onSelectUserType('client')} className="p-8 border-2 border-transparent rounded-2xl bg-secondary/50 hover:border-primary/50 transition-all text-left">
+                <Building className="w-10 h-10 mb-3 text-primary" />
+                <h3 className="font-bold text-lg text-foreground">Je suis un Client</h3>
+                <p className="text-muted-foreground">Enregistrez votre entreprise pour gérer vos projets.</p>
+            </button>
+            <button onClick={() => onSelectUserType('team')} className="p-8 border-2 border-transparent rounded-2xl bg-secondary/50 hover:border-primary/50 transition-all text-left">
+                <Users className="w-10 h-10 mb-3 text-primary" />
+                <h3 className="font-bold text-lg text-foreground">Je fais partie de l'équipe Telya</h3>
+                <p className="text-muted-foreground">Accédez à votre tableau de bord et à vos tâches.</p>
+            </button>
+        </div>
+    </motion.div>
+);
+
+
+interface RegistrationFormProps {
+    userType: 'client' | 'team';
+    onBack: () => void;
+    form: any;
+    onFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+    onSubmit: (e: React.FormEvent) => Promise<void>;
+    loading: boolean;
+    error: string;
+}
+
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ 
+    userType, 
+    onBack, 
+    form, 
+    onFormChange, 
+    onSubmit, 
+    loading, 
+    error
+}) => (
+     <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -50 }}
+     >
+        <button onClick={onBack} className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground mb-4">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Retour à la sélection
+        </button>
+        
+        <form onSubmit={onSubmit} className="space-y-4">
+            <h2 className="text-2xl font-semibold text-center text-foreground">
+                {userType === 'client' ? 'Inscription Client' : "Inscription Membre de l'équipe"}
+            </h2>
+            
+            <Input id="fullName" name="fullName" type="text" label="Nom complet" value={form.fullName} onChange={onFormChange} placeholder="John Doe" required />
+
+            {userType === 'client' ? (
+                <>
+                    <Input id="companyName" name="companyName" type="text" label="Nom de l’entreprise ou hôtel" value={form.companyName} onChange={onFormChange} placeholder="Hotel El Aurassi" required />
+                    <Input id="email" name="email" type="email" label="Adresse e-mail" value={form.email} onChange={onFormChange} placeholder="vous@entreprise.com" required />
+                    <Input id="phone" name="phone" type="tel" label="Téléphone / WhatsApp" value={form.phone} onChange={onFormChange} required />
+                    <Select id="sector" name="sector" label="Secteur d’activité" value={form.sector} onChange={onFormChange} required>
+                        <option value="" disabled>Choisissez un secteur...</option>
+                        <option value="Hôtellerie">Hôtellerie</option>
+                        <option value="Tourisme">Tourisme</option>
+                        <option value="Restauration">Restauration</option>
+                        <option value="Loisir & Spa">Loisir & Spa</option>
+                        <option value="Autre">Autre</option>
+                    </Select>
+                </>
+            ) : (
+                <>
+                    <Input id="email" name="email" type="email" label="Adresse e-mail" value={form.email} onChange={onFormChange} placeholder="prenom.nom@telya.com" required />
+                    <Select id="role" name="role" label="Poste dans l’agence" value={form.role} onChange={onFormChange} required>
+                         {teamRoles.map(role => (
+                            <option key={role.value} value={role.value}>{role.label}</option>
+                        ))}
+                    </Select>
+                    <Input id="phone" name="phone" type="tel" label="Téléphone professionnel (WhatsApp)" value={form.phone} onChange={onFormChange} required />
+                    <Input id="portfolioUrl" name="portfolioUrl" type="url" label="Lien Portfolio (Optionnel)" value={form.portfolioUrl} onChange={onFormChange} placeholder="https://votreportfolio.com" />
+                </>
+            )}
+            
+            <Input id="password" name="password" type="password" label="Mot de passe" value={form.password} onChange={onFormChange} placeholder="Au moins 6 caractères" required />
+            <Input id="confirmPassword" name="confirmPassword" type="password" label="Confirmer le mot de passe" value={form.confirmPassword} onChange={onFormChange} placeholder="••••••••" required />
+            
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+            
+            <Button type="submit" className="w-full py-3 !mt-6" disabled={loading}>
+                {loading ? 'Création du compte...' : (userType === 'client' ? 'Créer mon compte client' : 'Créer le compte')}
+            </Button>
+        </form>
+     </motion.div>
+);
+
+
 export default function Signup() {
+    const navigate = useNavigate();
     const [userType, setUserType] = useState<'client' | 'team' | null>(null);
     const [form, setForm] = useState({
         fullName: '',
         companyName: '',
-        contactEmail: '', // user's own email for client OR team
-        email: '', // sign-in email for both
+        email: '',
         phone: '',
         sector: '',
         password: '',
@@ -37,30 +141,12 @@ export default function Signup() {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
     
-    useEffect(() => {
-        if (userType === 'team') {
-            const generatedEmail = form.fullName
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
-                .toLowerCase()
-                .trim()
-                .replace(/\s+/g, '.') // replace spaces with dots
-                .replace(/[^a-z0-9.]/g, ''); // remove special characters except dot
-            
-            if (generatedEmail) {
-                setForm(f => ({ ...f, email: `${generatedEmail}@telya.com` }));
-            } else {
-                setForm(f => ({...f, email: ''}));
-            }
-        }
-    }, [form.fullName, userType]);
 
     const resetFormState = () => {
         setForm({
             fullName: '',
             companyName: '',
-            contactEmail: '',
             email: '',
             phone: '',
             sector: '',
@@ -70,7 +156,6 @@ export default function Signup() {
             portfolioUrl: '',
         });
         setError('');
-        setSuccessMessage('');
     };
 
     const selectUserType = (type: 'client' | 'team') => {
@@ -79,29 +164,14 @@ export default function Signup() {
     };
 
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
-
-    const handleCompanyNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const companyName = e.target.value;
-        const prefixes = ['hotel', 'hôtel'];
-        let slug = companyName.toLowerCase().trim();
-        for (const prefix of prefixes) {
-            if (slug.startsWith(prefix + ' ')) {
-                slug = slug.substring(prefix.length + 1);
-            }
-        }
-        slug = slug.replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-        const signInEmail = slug ? `${slug}@telya.com` : '';
-
-        setForm(f => ({ ...f, companyName, email: signInEmail }));
+        const { name, value } = e.target;
+        setForm(f => ({ ...f, [name]: value }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
-        setSuccessMessage('');
 
         if (form.password.length < 6) {
             setError('Le mot de passe doit contenir au moins 6 caractères.');
@@ -116,73 +186,78 @@ export default function Signup() {
         }
 
         try {
-            // Check if email already exists in users table (not auth table)
-            const { data: existingUsers, error: fetchError } = await supabase
-                .from('users')
-                .select('email')
-                .eq('email', form.email);
+            const selectedRoleInfo = teamRoles.find(r => r.value === form.role);
 
-            if (fetchError) throw fetchError;
-
-            if (existingUsers && existingUsers.length > 0) {
-                setError('Un compte avec cet e-mail de connexion existe déjà.');
-                setLoading(false);
-                return;
-            }
-
-            // Step 1: Sign up the user in Supabase Auth
+            // Step 1: Sign up the user in Supabase Auth.
+            // This will trigger the `handle_new_user` function in Supabase to create a basic profile.
             const { data: authData, error: signUpError } = await supabase.auth.signUp({
                 email: form.email,
                 password: form.password,
+                options: {
+                    data: {
+                        name: form.fullName, // Use 'name' to match the trigger's expectation (raw_user_meta_data->>'name')
+                        avatar_url: `https://i.pravatar.cc/150?u=${form.email}`
+                    }
+                }
             });
 
             if (signUpError) throw signUpError;
             if (!authData.user) throw new Error("L'inscription a échoué, aucun utilisateur retourné.");
 
-            // Step 2: Insert user profile into the public 'users' table
-            let profileData: Omit<User, 'password'>;
-            const registrationDate = new Date().toISOString();
+            // Step 2: Update the profile created by the trigger with the full details from the form.
             const userId = authData.user.id;
+            let profileData: Partial<User>;
 
             if (userType === 'client') {
                  profileData = {
-                    id: userId,
                     name: form.fullName,
-                    email: form.email,
                     role: 'client',
                     company: form.companyName,
-                    avatar_url: `https://i.pravatar.cc/150?u=${form.email}`,
-                    contactEmail: form.contactEmail,
                     phone: form.phone,
                     sector: form.sector,
-                    status: 'pending_validation',
-                    registeredAt: registrationDate,
+                    status: 'active',
                 };
             } else { // Team member
-                const selectedRoleInfo = teamRoles.find(r => r.value === form.role);
                 profileData = {
-                    id: userId,
                     name: form.fullName,
-                    email: form.email,
                     role: selectedRoleInfo?.role as UserRole || 'employee',
-                    jobTitle: selectedRoleInfo?.value,
-                    contactEmail: form.contactEmail,
+                    jobTitle: selectedRoleInfo?.value, // Store jobTitle in the profiles table
                     phone: form.phone,
-                    avatar_url: `https://i.pravatar.cc/150?u=${form.email}`,
                     portfolioUrl: form.portfolioUrl,
-                    status: 'pending_validation',
-                    registeredAt: registrationDate,
+                    status: 'active',
                 };
             }
             
-            const { error: insertError } = await supabase.from('users').insert(profileData);
+            const { data: updatedProfile, error: updateError } = await supabase
+                .from('profiles')
+                .update(profileData)
+                .eq('id', userId)
+                .select()
+                .single();
 
-            if (insertError) {
-                // Optional: handle profile insertion failure (e.g., delete the auth user)
-                throw insertError;
+            if (updateError) throw updateError;
+            if (!updatedProfile) throw new Error("La mise à jour du profil a échoué.");
+
+            // Step 3: Store complete user data in local storage and redirect.
+            localStorage.setItem('telya_user', JSON.stringify(updatedProfile));
+
+            switch(updatedProfile.role) {
+                case 'admin':
+                    navigate('/admin/dashboard');
+                    break;
+                case 'client':
+                    navigate('/client/dashboard');
+                    break;
+                case 'coordinator':
+                    navigate('/coordinator/dashboard');
+                    break;
+                case 'project_manager':
+                case 'employee':
+                    navigate('/dashboard');
+                    break;
+                default:
+                    navigate('/dashboard');
             }
-            
-            setSuccessMessage("Votre inscription est terminée ! Votre compte est maintenant en attente de validation par l'administrateur.");
 
         } catch (err: any) {
             setError(err.message || "Une erreur s'est produite lors de l'inscription.");
@@ -191,123 +266,6 @@ export default function Signup() {
         }
     };
     
-    const SelectionScreen = () => (
-        <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center"
-        >
-            <h2 className="text-2xl font-semibold mb-6 text-foreground">Rejoindre Telya</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <button onClick={() => selectUserType('client')} className="p-8 border-2 border-transparent rounded-2xl bg-secondary/50 hover:border-primary/50 transition-all text-left">
-                    <Building className="w-10 h-10 mb-3 text-primary" />
-                    <h3 className="font-bold text-lg text-foreground">Je suis un Client</h3>
-                    <p className="text-muted-foreground">Enregistrez votre entreprise pour gérer vos projets.</p>
-                </button>
-                <button onClick={() => selectUserType('team')} className="p-8 border-2 border-transparent rounded-2xl bg-secondary/50 hover:border-primary/50 transition-all text-left">
-                    <Users className="w-10 h-10 mb-3 text-primary" />
-                    <h3 className="font-bold text-lg text-foreground">Je fais partie de l'équipe Telya</h3>
-                    <p className="text-muted-foreground">Accédez à votre tableau de bord et à vos tâches.</p>
-                </button>
-            </div>
-        </motion.div>
-    );
-
-    const RegistrationForm = () => (
-         <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-         >
-            <button onClick={() => setUserType(null)} className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground mb-4">
-                <ArrowLeft className="w-4 h-4 mr-2" /> Retour à la sélection
-            </button>
-            
-            {successMessage ? (
-                 <div className="text-center p-6 bg-green-500/10 rounded-lg">
-                    <h3 className="text-xl font-semibold text-green-500">Merci !</h3>
-                    <p className="text-green-500/80 mt-2">{successMessage}</p>
-                 </div>
-            ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <h2 className="text-2xl font-semibold text-center text-foreground">
-                        {userType === 'client' ? 'Inscription Client' : "Inscription Membre de l'équipe"}
-                    </h2>
-                    
-                    <Input id="fullName" name="fullName" type="text" label="Nom complet" value={form.fullName} onChange={handleFormChange} placeholder="John Doe" required />
-
-                    {userType === 'client' ? (
-                        <>
-                            <Input id="companyName" name="companyName" type="text" label="Nom de l’entreprise ou hôtel" value={form.companyName} onChange={handleCompanyNameChange} placeholder="Hotel El Aurassi" required />
-                            <Input id="contactEmail" name="contactEmail" type="email" label="Adresse e-mail" value={form.contactEmail} onChange={handleFormChange} placeholder="vous@entreprise.com" required />
-                            <div>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    label="E-mail de connexion"
-                                    value={form.email}
-                                    readOnly
-                                    required
-                                    placeholder="Généré depuis le nom de l'entreprise..."
-                                    className="bg-secondary/50 cursor-not-allowed focus:ring-0 focus:border-border"
-                                />
-                                <p className="text-xs text-muted-foreground mt-1.5 px-1">
-                                    Cet identifiant est généré automatiquement.
-                                </p>
-                            </div>
-                            <Input id="phone" name="phone" type="tel" label="Téléphone / WhatsApp" value={form.phone} onChange={handleFormChange} required />
-                            <Select id="sector" name="sector" label="Secteur d’activité" value={form.sector} onChange={handleFormChange} required>
-                                <option value="" disabled>Choisissez un secteur...</option>
-                                <option value="Hôtellerie">Hôtellerie</option>
-                                <option value="Tourisme">Tourisme</option>
-                                <option value="Restauration">Restauration</option>
-                                <option value="Loisir & Spa">Loisir & Spa</option>
-                                <option value="Autre">Autre</option>
-                            </Select>
-                        </>
-                    ) : (
-                        <>
-                            <Input id="contactEmail" name="contactEmail" type="email" label="Adresse e-mail" value={form.contactEmail} onChange={handleFormChange} placeholder="votre.email@personnel.com" required />
-                            <div>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    label="E-mail de connexion"
-                                    value={form.email}
-                                    readOnly
-                                    required
-                                    placeholder="Généré depuis votre nom..."
-                                    className="bg-secondary/50 cursor-not-allowed focus:ring-0 focus:border-border"
-                                />
-                                <p className="text-xs text-muted-foreground mt-1.5 px-1">
-                                    Cet e-mail est généré automatiquement à partir de votre nom complet.
-                                </p>
-                            </div>
-                            <Select id="role" name="role" label="Rôle dans l’agence" value={form.role} onChange={handleFormChange} required>
-                                 {teamRoles.map(role => (
-                                    <option key={role.value} value={role.value}>{role.label}</option>
-                                ))}
-                            </Select>
-                            <Input id="phone" name="phone" type="tel" label="Téléphone professionnel (WhatsApp)" value={form.phone} onChange={handleFormChange} required />
-                            <Input id="portfolioUrl" name="portfolioUrl" type="url" label="Lien Portfolio (Optionnel)" value={form.portfolioUrl} onChange={handleFormChange} placeholder="https://votreportfolio.com" />
-                        </>
-                    )}
-                    
-                    <Input id="password" name="password" type="password" label="Mot de passe" value={form.password} onChange={handleFormChange} placeholder="Au moins 6 caractères" required />
-                    <Input id="confirmPassword" name="confirmPassword" type="password" label="Confirmer le mot de passe" value={form.confirmPassword} onChange={handleFormChange} placeholder="••••••••" required />
-                    
-                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-                    
-                    <Button type="submit" className="w-full py-3 !mt-6" disabled={loading}>
-                        {loading ? 'Création du compte...' : (userType === 'client' ? 'Créer mon compte client' : 'Créer le compte')}
-                    </Button>
-                </form>
-            )}
-         </motion.div>
-    );
-
     return (
         <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
             <div className="w-full max-w-lg">
@@ -316,7 +274,19 @@ export default function Signup() {
                     <p className="text-muted-foreground mt-2">Quand le Luxe rencontre la Précision Numérique.</p>
                 </div>
                 <div className="bg-card p-8 rounded-2xl shadow-lg border border-border">
-                    { !userType ? <SelectionScreen /> : <RegistrationForm /> }
+                    { !userType ? (
+                        <SelectionScreen onSelectUserType={selectUserType} /> 
+                    ) : (
+                        <RegistrationForm 
+                            userType={userType}
+                            onBack={() => setUserType(null)}
+                            form={form}
+                            onFormChange={handleFormChange}
+                            onSubmit={handleSubmit}
+                            loading={loading}
+                            error={error}
+                        /> 
+                    )}
                 </div>
                  <p className="text-center text-sm text-muted-foreground mt-6">
                     Vous avez déjà un compte ?{' '} 

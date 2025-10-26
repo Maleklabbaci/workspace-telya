@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Bell, Search, ChevronDown, Folder, CheckSquare } from 'lucide-react';
-import { Project, Task, User } from '../types';
+import { Project, Task, User, Notification } from '../types';
 import { supabase, getLocalUser } from '../lib/supabaseClient';
+import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from '../data/api';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/fr';
 
-// Mock notifications, in a real app this would come from an API
-const mockNotifications = [
-  { id: 1, text: 'Client Aura a approuvé un livrable.', time: 'il y a 2h', read: false },
-  { id: 2, text: 'Nouvelle tâche assignée dans Luxury Villa Showcase.', time: 'il y a 5h', read: false },
-  { id: 3, text: 'Le projet Hotel El Aurassi est passé en "en montage".', time: 'il y a 1j', read: true },
-];
+dayjs.extend(relativeTime);
+dayjs.locale('fr');
+
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
@@ -20,9 +21,9 @@ const Header: React.FC = () => {
     const [showResults, setShowResults] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
 
-    const [notifications, setNotifications] = useState(mockNotifications);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
-    const unreadCount = notifications.filter(n => !n.read).length;
+    const unreadCount = notifications.filter(n => !n.is_read).length;
 
     const searchRef = useRef<HTMLDivElement>(null);
     const notificationRef = useRef<HTMLDivElement>(null);
@@ -30,6 +31,53 @@ const Header: React.FC = () => {
     useEffect(() => {
         setUser(getLocalUser());
     }, []);
+
+    // Fetch initial notifications
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (user?.id) {
+                const data = await getNotifications(user.id);
+                setNotifications(data);
+            }
+        };
+        if (user) {
+            fetchNotifications();
+        }
+    }, [user]);
+
+    // Set up Supabase real-time subscription for new notifications
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const channel = supabase
+            .channel('public:notifications')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+                async (payload) => {
+                    const { data: notificationsData, error } = await supabase
+                        .from('notifications')
+                        .select('*, actor:actor_id!left(name, avatar_url)')
+                        .eq('id', payload.new.id)
+                        .limit(1);
+                    
+                    if (error) {
+                        console.error("Error fetching new notification:", error);
+                    } else if (notificationsData && notificationsData.length > 0) {
+                        const newNotification = notificationsData[0];
+                        if (!newNotification.actor) {
+                            (newNotification as any).actor = { name: 'Utilisateur Supprimé', avatar_url: '' };
+                        }
+                        setNotifications(prev => [newNotification as Notification, ...prev]);
+                    }
+                }
+            )
+            .subscribe();
+        
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.id]);
 
     useEffect(() => {
         const fetchResults = async () => {
@@ -69,19 +117,26 @@ const Header: React.FC = () => {
         localStorage.removeItem('telya_user');
         navigate('/login');
     };
-
-    const handleNotificationClick = () => {
-        setShowNotifications(!showNotifications);
-    };
     
-    const handleMarkAllAsRead = () => {
-        setNotifications(notifications.map(n => ({ ...n, read: true })));
+    const handleMarkAllAsRead = async () => {
+        if (!user) return;
+        await markAllNotificationsAsRead(user.id);
+        setNotifications(notifications.map(n => ({ ...n, is_read: true })));
     };
     
     const handleResultClick = (path: string) => {
         setSearchTerm('');
         setShowResults(false);
         navigate(path);
+    };
+
+    const handleNotificationItemClick = async (notification: Notification) => {
+        if (!notification.is_read) {
+            await markNotificationAsRead(notification.id);
+            setNotifications(notifications.map(n => n.id === notification.id ? { ...n, is_read: true } : n));
+        }
+        navigate(notification.link_to);
+        setShowNotifications(false);
     };
 
     if (!user) return null;
@@ -125,7 +180,7 @@ const Header: React.FC = () => {
       </div>
       <div className="flex items-center space-x-6">
         <div className="relative" ref={notificationRef}>
-            <button onClick={handleNotificationClick} className="relative text-muted-foreground hover:text-foreground">
+            <button onClick={() => setShowNotifications(!showNotifications)} className="relative text-muted-foreground hover:text-foreground">
               <Bell className="h-6 w-6" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -135,7 +190,7 @@ const Header: React.FC = () => {
               )}
             </button>
             {showNotifications && (
-                 <div className="absolute right-0 mt-3 w-80 bg-card rounded-md shadow-lg z-50 border border-border">
+                 <div className="absolute right-0 mt-3 w-96 bg-card rounded-md shadow-lg z-50 border border-border">
                     <div className="p-3 border-b border-border flex justify-between items-center">
                         <h3 className="font-semibold text-sm text-foreground">Notifications</h3>
                         {unreadCount > 0 && (
@@ -147,11 +202,14 @@ const Header: React.FC = () => {
                     <div className="py-1 max-h-80 overflow-y-auto">
                         {notifications.length > 0 ? (
                             notifications.map(notif => (
-                                <div key={notif.id} className="flex items-start px-4 py-3 hover:bg-accent">
-                                    {!notif.read && <div className="w-2 h-2 bg-primary rounded-full mt-1.5 mr-3 flex-shrink-0"></div>}
-                                    <div className={notif.read ? 'ml-5' : ''}>
-                                        <p className="text-sm text-foreground">{notif.text}</p>
-                                        <p className="text-xs text-muted-foreground">{notif.time}</p>
+                                <div key={notif.id} onClick={() => handleNotificationItemClick(notif)} className="flex items-start px-4 py-3 hover:bg-accent cursor-pointer">
+                                    {!notif.is_read && <div className="w-2 h-2 bg-primary rounded-full mt-1.5 mr-3 flex-shrink-0"></div>}
+                                    <div className={`flex-1 ${notif.is_read ? 'pl-5' : ''}`}>
+                                        <div className="flex items-center">
+                                            <img src={notif.actor?.avatar_url || `https://i.pravatar.cc/150?u=${notif.actor_id}`} alt={notif.actor?.name} className="w-6 h-6 rounded-full mr-2" />
+                                            <p className="text-sm text-foreground" dangerouslySetInnerHTML={{ __html: notif.message }}></p>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1 ml-8">{dayjs(notif.created_at).fromNow()}</p>
                                     </div>
                                 </div>
                             ))

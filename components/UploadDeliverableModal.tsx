@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
@@ -7,29 +8,32 @@ import { X, UploadCloud } from 'lucide-react';
 interface UploadDeliverableModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpload: (title: string, fileName: string) => void;
+  onUpload: (title: string, file: File) => void;
 }
 
 const UploadDeliverableModal: React.FC<UploadDeliverableModalProps> = ({ isOpen, onClose, onUpload }) => {
     const [title, setTitle] = useState('');
+    const [file, setFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (title && fileName) {
-            onUpload(title, fileName);
+        if (title && file) {
+            onUpload(title, file);
             handleClose();
         }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
+            setFile(e.target.files[0]);
             setFileName(e.target.files[0].name);
         }
     }
 
     const handleClose = () => {
         setTitle('');
+        setFile(null);
         setFileName('');
         onClose();
     };

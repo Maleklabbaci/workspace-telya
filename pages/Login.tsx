@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
@@ -27,9 +28,9 @@ export default function Login() {
       if (error) throw error;
 
       if (data.user) {
-        // Fetch profile from 'users' table
+        // Fetch profile from 'profiles' table
         const { data: profile, error: profileError } = await supabase
-            .from('users')
+            .from('profiles')
             .select('*')
             .eq('id', data.user.id)
             .single();
@@ -45,6 +46,7 @@ export default function Login() {
             throw new Error('Votre demande d’accès a été refusée par l’administrateur.');
         }
 
+        // The 'profiles' table is the single source of truth for user data.
         localStorage.setItem('telya_user', JSON.stringify(profile));
 
         // Redirect based on role
@@ -107,7 +109,7 @@ export default function Login() {
                     </Button>
                 </form>
                 <p className="text-center text-sm text-muted-foreground mt-6">
-                    Vous n'avez pas de compte ? <Link to="/signup" className="font-semibold text-primary hover:underline">Inscrivez-vous</Link>
+                    Pour tout nouvel accès, veuillez contacter votre administrateur.
                 </p>
             </div>
         </div>

@@ -1,13 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Task, Project } from '../types';
 import Card from '../components/ui/Card';
-// FIX: Import from API instead of mock data
-import { getProjects, getTasks, getUsers, updateTask } from '../data/api';
+import { getProjects, getTasks, getUsers, updateTask, createNotification } from '../data/api';
 import { FolderKanban, ClipboardCheck, MessageSquare, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CoordinatorTaskCard from '../components/CoordinatorTaskCard';
 
-// FIX: Remove localStorage-based task management
 const MetricCard: React.FC<{ icon: React.ReactElement<{ className?: string }>; title: string; value: string | number; }> = ({ icon, title, value }) => (
     <Card>
         <div className="flex items-center">
@@ -24,12 +23,10 @@ const MetricCard: React.FC<{ icon: React.ReactElement<{ className?: string }>; t
 
 const CoordinatorDashboard: React.FC = () => {
     const user: User = JSON.parse(localStorage.getItem('telya_user') || '{}');
-    // FIX: Add state for all required data
     const [tasks, setTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [users, setUsers] = useState<User[]>([]);
 
-    // FIX: Load data from API
     const loadData = async () => {
         setTasks(await getTasks());
         setProjects(await getProjects());
@@ -40,8 +37,8 @@ const CoordinatorDashboard: React.FC = () => {
         loadData();
     }, []);
     
-    const projectsInProgress = projects.filter(p => p.status === 'in_progress' || p.status === 'en tournage' || p.status === 'en montage').length;
-    const tasksToReview = tasks.filter(t => t.status === 'review').length;
+    const projectsInProgress = projects.filter(p => ['in_progress', 'en tournage', 'en montage'].includes(p.status)).length;
+    const tasksToReview = tasks.filter(t => t.status === 'review');
     const activeClients = new Set(projects.map(p => p.client_id)).size;
 
     const teamMembers = users.filter(u => u.role === 'employee');
@@ -50,12 +47,12 @@ const CoordinatorDashboard: React.FC = () => {
         return tasks.filter(t => t.assigned_to === userId && t.status !== 'done');
     }
     
-    // FIX: Make handler async and use API to update tasks
     const handleTaskAction = async (taskId: string, action: 'revision' | 'to_editor' | 'approve') => {
         const taskToUpdate = tasks.find(t => t.id === taskId);
         if (!taskToUpdate) return;
         
         let updates: Partial<Task> = {};
+        let newAssigneeId: string | undefined | null = null;
 
         switch (action) {
             case 'revision':
@@ -63,10 +60,11 @@ const CoordinatorDashboard: React.FC = () => {
                 break;
             case 'to_editor':
                 const editor = users.find(u => u.jobTitle === 'Video Editor');
+                newAssigneeId = editor?.id;
                 updates = {
                     status: 'todo',
                     title: `Montage: ${taskToUpdate.title}`,
-                    assigned_to: editor?.id
+                    assigned_to: newAssigneeId
                 };
                 break;
             case 'approve':
@@ -76,6 +74,37 @@ const CoordinatorDashboard: React.FC = () => {
 
         const updatedTask = await updateTask(taskId, updates);
         setTasks(tasks.map(t => (t.id === taskId ? updatedTask : t)));
+
+        // --- Send Notifications ---
+        const designer = users.find(u => u.id === taskToUpdate.assigned_to);
+        if (designer && (action === 'revision' || action === 'approve')) {
+            let message = '';
+            if (action === 'revision') {
+                message = `<strong>${user.name}</strong> a demandé une révision pour la tâche "${taskToUpdate.title}".`;
+            } else if (action === 'approve') {
+                message = `<strong>${user.name}</strong> a approuvé votre tâche "${taskToUpdate.title}". Bravo !`;
+            }
+
+            if (message) {
+                 await createNotification({
+                    user_id: designer.id,
+                    actor_id: user.id,
+                    project_id: taskToUpdate.project_id,
+                    message: message,
+                    link_to: `/projects/${taskToUpdate.project_id}`
+                });
+            }
+        }
+        
+        if (action === 'to_editor' && newAssigneeId) {
+             await createNotification({
+                user_id: newAssigneeId,
+                actor_id: user.id,
+                project_id: updatedTask.project_id,
+                message: `<strong>${user.name}</strong> vous a assigné une nouvelle tâche de montage: "${updatedTask.title}".`,
+                link_to: `/projects/${updatedTask.project_id}`
+            });
+        }
     };
 
     return (
@@ -85,16 +114,16 @@ const CoordinatorDashboard: React.FC = () => {
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard icon={<FolderKanban />} title="Projets en Cours" value={projectsInProgress} />
-                <MetricCard icon={<ClipboardCheck />} title="Tâches à Valider" value={tasksToReview} />
+                <MetricCard icon={<ClipboardCheck />} title="Tâches à Valider" value={tasksToReview.length} />
                 <MetricCard icon={<MessageSquare />} title="Communications Client" value="5" />
                 <MetricCard icon={<Users />} title="Clients Actifs" value={activeClients} />
             </div>
 
-            {tasksToReview > 0 && (
+            {tasksToReview.length > 0 && (
                  <Card className="mt-10">
-                    <h2 className="text-xl font-bold text-foreground mb-4">Tâches en Attente de Validation ({tasksToReview})</h2>
+                    <h2 className="text-xl font-bold text-foreground mb-4">Tâches en Attente de Validation ({tasksToReview.length})</h2>
                      <div className="space-y-4">
-                        {tasks.filter(t => t.status === 'review').map(task => {
+                        {tasksToReview.map(task => {
                             const project = projects.find(p => p.id === task.project_id);
                             const designer = users.find(u => u.id === task.assigned_to);
                             return (

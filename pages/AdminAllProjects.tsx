@@ -4,8 +4,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AddProjectModal from '../components/AddProjectModal';
 import { Project, User } from '../types';
-// FIX: Correctly import saveProjects
-import { getProjects, getUsers, saveProjects } from '../data/api';
+import { getProjects, getUsers, deleteProject } from '../data/api';
 import { PlusCircle, Edit, Trash2, Search } from 'lucide-react';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
@@ -17,7 +16,6 @@ const AdminAllProjects: React.FC = () => {
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // FIX: Make loadData async
     const loadData = async () => {
         setProjects(await getProjects());
         setUsers(await getUsers());
@@ -32,13 +30,9 @@ const AdminAllProjects: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    // FIX: Make handleDelete async
     const handleDelete = async (projectId: string) => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer ce projet ? Cela supprimera également les tâches associées et est irréversible.')) {
-            const allProjects = await getProjects();
-            const updatedProjects = allProjects.filter(p => p.id !== projectId);
-            // FIX: Await saveProjects
-            await saveProjects(updatedProjects);
+            await deleteProject(projectId);
             loadData();
         }
     };

@@ -1,20 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { Project, ProjectStatus } from '../types';
 import ProjectCard from '../components/ProjectCard';
 import Button from '../components/ui/Button';
 import AddProjectModal from '../components/AddProjectModal';
-// FIX: Import from API instead of mock data
 import { getProjects } from '../data/api';
 
 const statuses: ProjectStatus[] = ['draft', 'active', 'in_progress', 'completed', 'archived', 'en préparation', 'en tournage', 'en montage', 'livré'];
 
 const ProjectsList: React.FC = () => {
-  // FIX: Add state to hold projects fetched from API
   const [projects, setProjects] = useState<Project[]>([]);
   const [filter, setFilter] = useState<ProjectStatus | 'all'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // FIX: Fetch projects asynchronously on component mount
   const fetchProjects = async () => {
     const data = await getProjects();
     setProjects(data);
@@ -27,10 +25,7 @@ const ProjectsList: React.FC = () => {
   const filteredProjects = projects.filter(p => filter === 'all' || p.status === filter);
 
   const handleProjectAdded = () => {
-    // In a real app, you would refetch the projects list here.
-    // For this demo, we can just log it.
-    console.log("Projet ajouté/modifié, la liste devrait se rafraîchir.");
-    fetchProjects(); // Re-fetch projects after one is added/modified
+    fetchProjects();
   };
 
   return (

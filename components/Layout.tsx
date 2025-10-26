@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import Chat from './Chat';
 
 const Layout: React.FC = () => {
   return (
@@ -13,6 +15,7 @@ const Layout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+      <Chat />
     </div>
   );
 };

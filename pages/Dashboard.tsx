@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Project, User, Task } from '../types';
 import ProjectCard from '../components/ProjectCard';
 import { motion } from 'framer-motion';
 import { Palette, Camera, Film, MessageSquare, Briefcase, Code, UserCheck, Star, CheckCircle } from 'lucide-react';
-// FIX: Correctly import saveTasks
-import { getProjects, getTasks, saveTasks } from '../data/api';
+import { getProjects, getTasks, updateTask } from '../data/api';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
@@ -12,43 +12,32 @@ const DesignerDashboard: React.FC<{ user: User }> = ({ user }) => {
     const [myTask, setMyTask] = useState<Task | null>(null);
     const [project, setProject] = useState<Project | null>(null);
     
+    const fetchData = async () => {
+        const tasks = await getTasks();
+        const allProjects = await getProjects();
+        let assignedTask = tasks.find(t => t.assigned_to === user.id && t.status === 'in_progress');
+        
+        if (!assignedTask) {
+             assignedTask = tasks.find(t => t.assigned_to === user.id && t.status === 'review');
+        }
+
+        if (assignedTask) {
+            setMyTask(assignedTask);
+            setProject(allProjects.find(p => p.id === assignedTask.project_id) || null);
+        } else {
+            setMyTask(null);
+            setProject(null);
+        }
+    };
+
     useEffect(() => {
-        // FIX: Make data fetching async
-        const fetchData = async () => {
-            const tasks = await getTasks();
-            const allProjects = await getProjects();
-            // FIX: Call .find on the resolved array
-            const assignedTask = tasks.find(t => t.assigned_to === user.id && t.status === 'in_progress');
-            if (assignedTask) {
-                setMyTask(assignedTask);
-                // FIX: Call .find on the resolved array
-                setProject(allProjects.find(p => p.id === assignedTask.project_id) || null);
-            } else {
-                 // FIX: Call .find on the resolved array
-                 const reviewTask = tasks.find(t => t.assigned_to === user.id && t.status === 'review');
-                 if(reviewTask) {
-                    setMyTask(reviewTask);
-                    // FIX: Call .find on the resolved array
-                    setProject(allProjects.find(p => p.id === reviewTask.project_id) || null);
-                 }
-            }
-        };
         fetchData();
     }, [user.id]);
 
-    // FIX: Make handler async
     const handleCompleteTask = async () => {
         if (myTask) {
-            const updatedTask = { ...myTask, status: 'review' as 'review' };
-            const allTasks = await getTasks();
-            // FIX: Call .findIndex on the resolved array
-            const taskIndex = allTasks.findIndex(t => t.id === myTask.id);
-            if (taskIndex !== -1) {
-                allTasks[taskIndex] = updatedTask;
-                // FIX: Await saveTasks
-                await saveTasks(allTasks);
-                setMyTask(updatedTask);
-            }
+            const updatedTask = await updateTask(myTask.id, { status: 'review' });
+            setMyTask(updatedTask);
         }
     };
     
@@ -95,13 +84,12 @@ const DesignerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
 
 const GenericDashboard: React.FC<{ user: User }> = ({ user }) => {
-  // FIX: Fetch projects and store in state
-  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     const fetchProjects = async () => {
-        const projects = await getProjects();
-        setAllProjects(projects);
+        const data = await getProjects();
+        setProjects(data.filter(p => p.status === 'in_progress'));
     };
     fetchProjects();
   }, []);
@@ -149,8 +137,7 @@ const DashboardSection: React.FC<{ icon: React.ReactElement<{ className?: string
         <div>
             <h2 className="text-2xl font-bold text-foreground mb-4">Vos Projets en Cours</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* FIX: Call .filter on the resolved array from state */}
-                {allProjects.filter(p => p.status === 'in_progress').map(project => (
+                {projects.map(project => (
                     <motion.div key={project.id} whileHover={{ y: -5 }}>
                         <ProjectCard project={project} />
                     </motion.div>
@@ -162,7 +149,11 @@ const DashboardSection: React.FC<{ icon: React.ReactElement<{ className?: string
 };
 
 const Dashboard: React.FC = () => {
-    const user: User = JSON.parse(localStorage.getItem('telya_user') || '{}');
+    const user: User | null = JSON.parse(localStorage.getItem('telya_user') || 'null');
+
+    if (!user) {
+        return <div>Chargement...</div>
+    }
 
   return (
     <motion.div

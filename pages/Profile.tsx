@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import Card from '../components/ui/Card';
@@ -5,15 +6,13 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Toast from '../components/ui/Toast';
 import { Camera, Save } from 'lucide-react';
-// FIX: Correctly import updateUser
-import { getUsers, updateUser } from '../data/api';
+import { updateUser } from '../data/api';
 import { supabase } from '../lib/supabaseClient';
 
 const Profile: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const [name, setName] = useState('');
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-    const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -39,45 +38,42 @@ const Profile: React.FC = () => {
         }
     };
 
-    // FIX: Refactor handleSave to be async and use correct update methods
     const handleSave = async () => {
         setError('');
-        if (newPassword && newPassword !== confirmPassword) {
-            setError('Les nouveaux mots de passe ne correspondent pas.');
-            return;
-        }
+        if (!user) return;
 
-        if (user) {
-            try {
-                // Update password via Supabase Auth if a new one is provided
-                if (newPassword) {
-                    const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
-                    if (authError) {
-                        throw new Error(authError.message);
-                    }
+        try {
+             // --- Update Password ---
+            if (newPassword) {
+                if (newPassword.length < 6) {
+                    throw new Error("Le nouveau mot de passe doit contenir au moins 6 caractères.");
                 }
-                
-                // Update profile information in the 'users' table
-                const profileUpdates = {
-                    name: name,
-                    avatar_url: avatarPreview || user.avatar_url,
-                };
-                
-                const updatedProfile = await updateUser(user.id, profileUpdates);
-                
-                // Also update the currently logged in user session object
-                localStorage.setItem('telya_user', JSON.stringify(updatedProfile));
-                setUser(updatedProfile);
-
-                setShowToast(true);
-                setTimeout(() => setShowToast(false), 3000);
-                
-                setCurrentPassword('');
-                setNewPassword('');
-                setConfirmPassword('');
-            } catch (e: any) {
-                setError(e.message);
+                if (newPassword !== confirmPassword) {
+                    throw new Error('Les nouveaux mots de passe ne correspondent pas.');
+                }
+                const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
+                if (authError) throw authError;
             }
+
+            // --- Update Profile Info ---
+            const profileUpdates: Partial<User> = {};
+            if (name !== user.name) profileUpdates.name = name;
+            if (avatarPreview !== user.avatar_url) profileUpdates.avatar_url = avatarPreview || user.avatar_url;
+
+            if (Object.keys(profileUpdates).length > 0) {
+                 const updatedProfile = await updateUser(user.id, profileUpdates);
+                 localStorage.setItem('telya_user', JSON.stringify(updatedProfile));
+                 setUser(updatedProfile);
+            }
+           
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
+            
+            setNewPassword('');
+            setConfirmPassword('');
+
+        } catch (e: any) {
+            setError(e.message);
         }
     };
     
@@ -119,15 +115,14 @@ const Profile: React.FC = () => {
                                 <div>
                                     <h3 className="text-lg font-semibold border-b border-border pb-2 mb-4">Changer le mot de passe</h3>
                                     <div className="space-y-4">
-                                        <Input label="Mot de passe actuel" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="••••••••" />
-                                        <Input label="Nouveau mot de passe" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" />
+                                        <Input label="Nouveau mot de passe" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Laisser vide pour ne pas changer" />
                                         <Input label="Confirmer le nouveau mot de passe" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" />
                                     </div>
                                 </div>
                                 {error && <p className="text-red-500 text-sm">{error}</p>}
                                 <div className="flex justify-end pt-4">
                                     <Button onClick={handleSave}>
-                                        <Save className="w-5 h-5 mr-2" /> Enregistrer
+                                        <Save className="w-5 h-5 mr-2" /> Enregistrer les modifications
                                     </Button>
                                 </div>
                             </div>

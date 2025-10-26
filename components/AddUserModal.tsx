@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import Modal from './ui/Modal';
@@ -6,8 +8,9 @@ import Select from './ui/Select';
 import Button from './ui/Button';
 import Toast from './ui/Toast';
 import { X } from 'lucide-react';
-// FIX: Correctly import saveUsers
-import { getUsers, saveUsers } from '../data/api';
+import { updateUser } from '../data/api';
+import { supabase } from '../lib/supabaseClient';
+
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -20,23 +23,27 @@ interface AddUserModalProps {
 const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModified, initialRole = 'client', userToEdit }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [company, setCompany] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
   const [role, setRole] = useState<UserRole>(initialRole);
+  const [jobTitle, setJobTitle] = useState('');
   const [error, setError] = useState('');
   const [showToast, setShowToast] = useState(false);
   
   const isEditing = !!userToEdit;
 
   useEffect(() => {
-    if (isEditing && userToEdit) {
-        setName(userToEdit.name);
-        setEmail(userToEdit.email);
-        setRole(userToEdit.role);
-        setCompany(userToEdit.company || '');
-        setJobTitle(userToEdit.jobTitle || '');
-    } else {
-        setRole(initialRole);
+    if (isOpen) {
+        if (isEditing && userToEdit) {
+            setName(userToEdit.name);
+            setEmail(userToEdit.email);
+            setRole(userToEdit.role);
+            setCompany(userToEdit.company || '');
+            setJobTitle(userToEdit.jobTitle || '');
+        } else {
+            resetForm();
+            setRole(initialRole);
+        }
     }
   }, [userToEdit, isEditing, initialRole, isOpen]);
 
@@ -45,8 +52,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
     setName('');
     setEmail('');
     setCompany('');
-    setJobTitle('');
     setRole(initialRole);
+    setJobTitle('');
+    setPassword('');
     setError('');
   };
 
@@ -55,58 +63,60 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
     onClose();
   };
 
-  // FIX: Make handleSubmit async to handle API calls
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // FIX: Await user data
-    const existingUsers = await getUsers();
-    
-    // FIX: Call .some on the resolved array
-    if (!isEditing && existingUsers.some(u => u.email === email)) {
-      setError('Un utilisateur avec cet e-mail existe déjà.');
-      return;
-    }
-
-    if (isEditing && userToEdit) {
-        // Edit logic
-        // FIX: Call .findIndex on the resolved array
-        const userIndex = existingUsers.findIndex(u => u.id === userToEdit.id);
-        if (userIndex !== -1) {
-            existingUsers[userIndex] = {
-                ...existingUsers[userIndex],
+    try {
+        if (isEditing && userToEdit) {
+            // --- Edit existing user profile ---
+            const updates: Partial<User> = {
                 name,
-                email,
                 role,
                 company: role === 'client' ? company : undefined,
-                jobTitle: ['employee', 'project_manager', 'admin', 'coordinator'].includes(role) ? jobTitle : undefined,
+                jobTitle: role !== 'client' ? jobTitle : undefined,
             };
-            // FIX: Await saving users
-            await saveUsers(existingUsers);
+            await updateUser(userToEdit.id, updates);
+        } else {
+            // --- Add new user (auth + profile) ---
+            if (!password) {
+                setError('Un mot de passe est requis pour les nouveaux utilisateurs.');
+                return;
+            }
+            // 1. Create auth user
+            const { data: authData, error: signUpError } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        name: name, // Pass name to be picked up by the handle_new_user trigger
+                    }
+                }
+            });
+            if (signUpError) throw signUpError;
+            if (!authData.user) throw new Error("La création de l'utilisateur a échoué.");
+
+            // 2. Update the profile created by the trigger with full details
+            const profileUpdates: Partial<User> = {
+              name,
+              role,
+              status: 'active',
+              company: role === 'client' ? company : undefined,
+              jobTitle: role !== 'client' ? jobTitle : undefined,
+              avatar_url: `https://i.pravatar.cc/150?u=${email}`
+            };
+
+            await supabase.from('profiles').update(profileUpdates).eq('id', authData.user.id);
         }
-    } else {
-        // Add new user logic
-        const newUser: User = {
-          id: `${role}-${Date.now()}`,
-          name,
-          email,
-          role,
-          password: 'password123', // Default password for new users
-          status: 'active',
-          company: role === 'client' ? company : undefined,
-          jobTitle: ['employee', 'project_manager', 'admin', 'coordinator'].includes(role) ? jobTitle : undefined,
-          avatar_url: `https://i.pravatar.cc/150?u=${email}`
-        };
-        // FIX: Await saving users
-        await saveUsers([...existingUsers, newUser]);
+        
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+        
+        onUserModified();
+        handleClose();
+    } catch (err: any) {
+        setError(err.message || 'Une erreur est survenue.');
     }
-    
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-    
-    onUserModified();
-    handleClose();
   };
 
   return (
@@ -115,7 +125,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
           <form onSubmit={handleSubmit}>
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold text-foreground">{isEditing ? 'Modifier l\'utilisateur' : 'Ajouter un utilisateur'}</h2>
+                  <h2 className="text-2xl font-bold text-foreground">{isEditing ? "Modifier l'utilisateur" : 'Ajouter un utilisateur'}</h2>
                    <button type="button" onClick={handleClose} className="p-1 rounded-full hover:bg-accent">
                       <X className="w-6 h-6 text-muted-foreground" />
                   </button>
@@ -137,12 +147,14 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
                   <Input label="Nom complet" value={name} onChange={e => setName(e.target.value)} required />
                   <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={isEditing} className={`${isEditing ? 'cursor-not-allowed bg-secondary/50' : ''}`}/>
                   
-                  {role === 'client' && (
+                  {role === 'client' ? (
                       <Input label="Nom de l'entreprise" value={company} onChange={e => setCompany(e.target.value)} required />
+                  ) : (
+                      <Input label="Poste" value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="ex: Designer, Monteur Vidéo..." />
                   )}
 
-                  {['employee', 'project_manager', 'coordinator'].includes(role) && (
-                      <Input label="Poste" value={jobTitle} onChange={e => setJobTitle(e.target.value)} required placeholder="ex: Vidéaste" />
+                  {!isEditing && (
+                      <Input label="Mot de passe" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Définir un mot de passe temporaire" />
                   )}
 
                   {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -150,7 +162,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
             </div>
             <div className="flex justify-end p-6 border-t border-border space-x-3 bg-secondary/50 rounded-b-2xl">
                 <Button type="button" variant="secondary" onClick={handleClose}>Annuler</Button>
-                <Button type="submit">{isEditing ? 'Enregistrer' : 'Ajouter'}</Button>
+                <Button type="submit">{isEditing ? 'Enregistrer' : 'Ajouter l’utilisateur'}</Button>
             </div>
           </form>
         </Modal>

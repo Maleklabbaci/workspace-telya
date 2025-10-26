@@ -4,18 +4,15 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AddUserModal from '../components/AddUserModal';
 import { User, Project } from '../types';
-// FIX: Correctly import saveUsers
-import { getUsers, getProjects, saveUsers } from '../data/api';
+import { getUsers, getProjects, deleteUser } from '../data/api';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 
 const AdminClients: React.FC = () => {
     const [clients, setClients] = useState<User[]>([]);
-    // FIX: Add state for projects to use in getProjectCount
     const [projects, setProjects] = useState<Project[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
 
-    // FIX: Load both clients and projects asynchronously
     const loadData = async () => {
         const allUsers = await getUsers();
         setClients(allUsers.filter(u => u.role === 'client'));
@@ -28,7 +25,6 @@ const AdminClients: React.FC = () => {
     }, []);
 
     const getProjectCount = (clientId: string) => {
-        // FIX: Use projects from state
         return projects.filter(p => p.client_id === clientId).length;
     };
     
@@ -37,13 +33,9 @@ const AdminClients: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    // FIX: Make handleDelete async
     const handleDelete = async (userId: string) => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible.')) {
-            const allUsers = await getUsers();
-            const updatedUsers = allUsers.filter(u => u.id !== userId);
-            // FIX: Await saveUsers
-            await saveUsers(updatedUsers);
+            await deleteUser(userId);
             loadData();
         }
     };
