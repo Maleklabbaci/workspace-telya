@@ -22,9 +22,9 @@ const ClientHeader: React.FC = () => {
   };
   
   return (
-    <header className="flex items-center justify-between h-20 px-6 md:px-10 bg-card border-b border-border">
+    <header className="flex items-center justify-between h-20 px-4 sm:px-6 md:px-10 bg-card border-b border-border">
       <div className="flex items-center space-x-4">
-        <TelyaLogo className="!h-8 text-primary" />
+        <TelyaLogo className="text-3xl text-primary" />
       </div>
       <div className="flex items-center space-x-6">
         {user && (

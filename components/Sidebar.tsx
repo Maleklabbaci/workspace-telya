@@ -53,7 +53,7 @@ const Sidebar: React.FC = () => {
   return (
     <div className="hidden md:flex flex-col w-64 bg-card text-card-foreground border-r border-border backdrop-blur-lg">
       <div className="flex items-center justify-center h-20 border-b border-border px-6">
-        <TelyaLogo className="!h-10 text-primary" />
+        <TelyaLogo className="text-4xl text-primary" />
       </div>
       <div className="flex-1 flex flex-col justify-between p-4">
         <nav className="space-y-1">

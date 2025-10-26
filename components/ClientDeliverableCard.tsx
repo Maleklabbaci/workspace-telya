@@ -49,7 +49,7 @@ const ClientDeliverableCard: React.FC<ClientDeliverableCardProps> = ({ deliverab
           Téléversé le {dayjs(deliverable.uploaded_at).format('D MMM YYYY')}
         </p>
 
-        <div className="mt-6 flex space-x-3">
+        <div className="mt-6 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
           <Link to={reviewLink} className="flex-1">
              <Button variant="secondary" className="w-full">
                 <MessageSquare className="h-4 w-4 mr-2" />
@@ -57,7 +57,7 @@ const ClientDeliverableCard: React.FC<ClientDeliverableCardProps> = ({ deliverab
             </Button>
           </Link>
           {deliverable.status === 'in_review' && (
-             <Button variant="primary" className="flex-1" onClick={() => onApprove(deliverable.id)}>
+             <Button variant="primary" className="flex-1 w-full" onClick={() => onApprove(deliverable.id)}>
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Approuver
             </Button>

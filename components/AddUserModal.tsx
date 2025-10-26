@@ -11,6 +11,23 @@ import { X } from 'lucide-react';
 import { updateUser, createUser } from '../data/api';
 import { supabase } from '../lib/supabaseClient';
 
+const employeeJobTitles = [
+  { value: 'Designer', label: '🎨 Designer' },
+  { value: 'Filmmaker/Photographer', label: '🎥 Cinéaste / Photographe' },
+  { value: 'Video Editor', label: '🎬 Monteur Vidéo' },
+  { value: 'Développeur Web', label: '💻 Développeur Web' },
+  { value: 'Commercial', label: '💼 Commercial' },
+  { value: 'Community Manager', label: '📈 Community Manager' },
+];
+
+const roleOptions: { value: UserRole, label: string }[] = [
+    { value: 'client', label: 'Client' },
+    { value: 'employee', label: 'Employé' },
+    { value: 'project_manager', label: 'Chef de projet' },
+    { value: 'coordinator', label: 'Coordinateur' },
+    { value: 'admin', label: 'Admin' },
+];
+
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -32,6 +49,10 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
   
   const isEditing = !!userToEdit;
 
+  const availableRoles = initialRole === 'client'
+      ? roleOptions.filter(r => r.value === 'client')
+      : roleOptions.filter(r => r.value !== 'client');
+
   useEffect(() => {
     if (isOpen) {
         if (isEditing && userToEdit) {
@@ -42,7 +63,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
             setJobTitle(userToEdit.jobTitle || '');
         } else {
             resetForm();
-            setRole(initialRole);
+            setRole(initialRole === 'client' ? 'client' : 'employee');
         }
     }
   }, [userToEdit, isEditing, initialRole, isOpen]);
@@ -67,6 +88,22 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
     e.preventDefault();
     setError('');
 
+    let finalJobTitle: string | undefined = undefined;
+    if (role === 'employee') {
+        if (!jobTitle) {
+            setError('Veuillez sélectionner un poste pour l\'employé.');
+            return;
+        }
+        finalJobTitle = jobTitle;
+    } else if (role === 'project_manager') {
+        finalJobTitle = 'Chef de projet';
+    } else if (role === 'coordinator') {
+        finalJobTitle = 'Coordinateur';
+    } else if (role === 'admin') {
+        finalJobTitle = 'Administrateur';
+    }
+
+
     try {
         if (isEditing && userToEdit) {
             // --- Edit existing user profile ---
@@ -74,7 +111,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
                 name,
                 role,
                 company: role === 'client' ? company : undefined,
-                jobTitle: role !== 'client' ? jobTitle : undefined,
+                jobTitle: finalJobTitle,
             };
             await updateUser(userToEdit.id, updates);
         } else {
@@ -106,7 +143,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
               role,
               status: 'active',
               company: role === 'client' ? company : undefined,
-              jobTitle: role !== 'client' ? jobTitle : undefined,
+              jobTitle: finalJobTitle,
               avatar_url: `https://i.pravatar.cc/150?u=${email}`
             };
 
@@ -139,13 +176,17 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
                   <Select
                       label="Rôle de l'utilisateur"
                       value={role}
-                      onChange={e => setRole(e.target.value as UserRole)}
+                      onChange={e => {
+                          const newRole = e.target.value as UserRole;
+                          setRole(newRole);
+                          if (newRole !== 'employee') {
+                              setJobTitle('');
+                          }
+                      }}
                   >
-                      <option value="client">Client</option>
-                      <option value="employee">Employé</option>
-                      <option value="project_manager">Chef de projet</option>
-                      <option value="coordinator">Coordinateur</option>
-                      <option value="admin">Admin</option>
+                      {availableRoles.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                   </Select>
 
                   <Input label="Nom complet" value={name} onChange={e => setName(e.target.value)} required />
@@ -153,9 +194,19 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
                   
                   {role === 'client' ? (
                       <Input label="Nom de l'entreprise" value={company} onChange={e => setCompany(e.target.value)} required />
-                  ) : (
-                      <Input label="Poste" value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="ex: Designer, Monteur Vidéo..." />
-                  )}
+                  ) : role === 'employee' ? (
+                     <Select 
+                        label="Poste"
+                        value={jobTitle}
+                        onChange={e => setJobTitle(e.target.value)}
+                        required
+                      >
+                        <option value="" disabled>Sélectionner un poste...</option>
+                        {employeeJobTitles.map(jt => (
+                            <option key={jt.value} value={jt.value}>{jt.label}</option>
+                        ))}
+                      </Select>
+                  ) : null}
 
                   {!isEditing && (
                       <Input label="Mot de passe" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Définir un mot de passe temporaire" />

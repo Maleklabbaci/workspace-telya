@@ -7,7 +7,7 @@ const ClientLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <ClientHeader />
-      <main className="p-6 md:p-10">
+      <main className="p-4 sm:p-6 md:p-10">
         <Outlet />
       </main>
     </div>

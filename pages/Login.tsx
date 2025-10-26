@@ -80,7 +80,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center px-4">
         <div className="w-full max-w-md z-10">
             <div className="text-center mb-8">
-                <TelyaLogo className="text-primary mx-auto" />
+                <TelyaLogo className="text-5xl text-primary mx-auto" />
                 <p className="text-muted-foreground mt-2 font-semibold">Where Luxury Meets Digital Precision.</p>
             </div>
             <Card className="p-8">

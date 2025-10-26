@@ -139,12 +139,12 @@ const ClientDashboard: React.FC = () => {
 
     return (
         <>
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground">Bienvenue, {user.name} 👋</h1>
                     <p className="mt-1 text-muted-foreground">Consultez vos projets et faites de nouvelles demandes ici.</p>
                 </div>
-                <Button onClick={() => setIsNewRequestModalOpen(true)}>
+                <Button onClick={() => setIsNewRequestModalOpen(true)} className="w-full sm:w-auto">
                     <Plus className="w-5 h-5 mr-2" />
                     Créer une demande
                 </Button>
