@@ -10,20 +10,52 @@ import { UploadCloud, Save, Sun, Moon } from 'lucide-react';
 interface AgencySettings {
     name: string;
     logoUrl: string;
-    primaryColor: string;
+    primaryColorHex: string;
+    primaryColorHsl: string;
 }
+
+// Utility function to convert HEX to HSL string
+function hexToHsl(H: string): string {
+    let r = 0, g = 0, b = 0;
+    if (H.length === 4) {
+        r = parseInt(H[1] + H[1], 16);
+        g = parseInt(H[2] + H[2], 16);
+        b = parseInt(H[3] + H[3], 16);
+    } else if (H.length === 7) {
+        r = parseInt(H.substring(1, 3), 16);
+        g = parseInt(H.substring(3, 5), 16);
+        b = parseInt(H.substring(5, 7), 16);
+    }
+    r /= 255; g /= 255; b /= 255;
+    const cmin = Math.min(r,g,b), cmax = Math.max(r,g,b), delta = cmax - cmin;
+    let h = 0, s = 0, l = 0;
+    if (delta === 0) h = 0;
+    else if (cmax === r) h = ((g - b) / delta) % 6;
+    else if (cmax === g) h = (b - r) / delta + 2;
+    else h = (r - g) / delta + 4;
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
+    l = (cmax + cmin) / 2;
+    s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+    s = +(s * 100).toFixed(1);
+    l = +(l * 100).toFixed(1);
+    return `${h} ${s}% ${l}%`;
+}
+
 
 const AdminSettings: React.FC = () => {
     const [settings, setSettings] = useState<AgencySettings>({
         name: 'Telya Agency',
         logoUrl: '',
-        primaryColor: '#00592e',
+        primaryColorHex: '#00592e',
+        primaryColorHsl: '147 100% 18%',
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [language, setLanguage] = useState('en');
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [showToast, setShowToast] = useState(false);
 
+    // Load settings from localStorage on component mount
     useEffect(() => {
         const savedSettings = localStorage.getItem('telya_agency_settings');
         if (savedSettings) {
@@ -31,6 +63,9 @@ const AdminSettings: React.FC = () => {
             setSettings(parsedSettings);
             if (parsedSettings.logoUrl) {
                 setLogoPreview(parsedSettings.logoUrl);
+            }
+            if (parsedSettings.primaryColorHsl) {
+                 document.documentElement.style.setProperty('--primary', parsedSettings.primaryColorHsl);
             }
         }
         
@@ -41,10 +76,26 @@ const AdminSettings: React.FC = () => {
         setLanguage(savedLanguage);
 
     }, []);
+    
+    // Apply color change in real-time
+    useEffect(() => {
+        document.documentElement.style.setProperty('--primary', settings.primaryColorHsl);
+    }, [settings.primaryColorHsl]);
+
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setSettings(prev => ({ ...prev, [name]: value }));
+    };
+    
+    const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const hex = e.target.value;
+        const hsl = hexToHsl(hex);
+        setSettings(prev => ({
+            ...prev,
+            primaryColorHex: hex,
+            primaryColorHsl: hsl
+        }));
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,15 +139,15 @@ const AdminSettings: React.FC = () => {
     return (
     <>
         <div>
-            <h1 className="text-3xl font-bold text-foreground">Agency Settings</h1>
-            <p className="mt-1 text-muted-foreground">Customize the look and feel of your Telya portal.</p>
+            <h1 className="text-3xl font-bold text-foreground">Paramètres de l'Agence</h1>
+            <p className="mt-1 text-muted-foreground">Personnalisez l'apparence de votre portail Telya.</p>
             
             <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
                     <Card>
                         <div className="space-y-6">
                             <Input 
-                                label="Agency Name"
+                                label="Nom de l'agence"
                                 id="name"
                                 name="name"
                                 value={settings.name}
@@ -104,10 +155,10 @@ const AdminSettings: React.FC = () => {
                             />
                             
                             <div>
-                                <label className="block text-sm font-medium text-foreground mb-1.5">Agency Logo</label>
+                                <label className="block text-sm font-medium text-foreground mb-1.5">Logo de l'agence</label>
                                 <div className="flex items-center space-x-6">
                                     {logoPreview ? (
-                                        <img src={logoPreview} alt="Logo Preview" className="w-16 h-16 rounded-lg object-contain bg-secondary p-1" />
+                                        <img src={logoPreview} alt="Aperçu du logo" className="w-16 h-16 rounded-lg object-contain bg-secondary p-1" />
                                     ) : (
                                         <div className="w-16 h-16 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground">
                                             Logo
@@ -115,25 +166,25 @@ const AdminSettings: React.FC = () => {
                                     )}
                                     <label htmlFor="logo-upload" className="flex-1 flex items-center justify-center px-4 py-6 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent">
                                         <UploadCloud className="w-6 h-6 text-muted-foreground mr-3" />
-                                        <span className="text-sm text-muted-foreground">Click to upload a new logo</span>
+                                        <span className="text-sm text-muted-foreground">Cliquez pour téléverser un nouveau logo</span>
                                     </label>
                                     <input id="logo-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
                                 </div>
                             </div>
 
                              <Input 
-                                label="Primary Accent Color"
-                                id="primaryColor"
-                                name="primaryColor"
+                                label="Couleur d'accentuation principale"
+                                id="primaryColorHex"
+                                name="primaryColorHex"
                                 type="color"
-                                value={settings.primaryColor}
-                                onChange={handleInputChange}
+                                value={settings.primaryColorHex}
+                                onChange={handleColorChange}
                                 className="p-1 h-10"
                             />
 
                             <div className="flex justify-end pt-4">
                                 <Button onClick={handleSave}>
-                                   <Save className="w-5 h-5 mr-2" /> Save Settings
+                                   <Save className="w-5 h-5 mr-2" /> Enregistrer les paramètres
                                 </Button>
                             </div>
                         </div>
@@ -142,19 +193,20 @@ const AdminSettings: React.FC = () => {
                  <div>
                     <div className="space-y-8">
                         <Card>
-                            <h3 className="text-lg font-semibold text-foreground mb-4">Theme</h3>
+                            <h3 className="text-lg font-semibold text-foreground mb-4">Thème</h3>
                             <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
                                 <div className="flex items-center">
                                     { isDarkMode ? <Moon className="w-5 h-5 text-muted-foreground mr-3" /> : <Sun className="w-5 h-5 text-muted-foreground mr-3" /> }
-                                    <span className="font-semibold">{isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
+                                    <span className="font-semibold">{isDarkMode ? 'Mode Sombre' : 'Mode Clair'}</span>
                                 </div>
                                 <Switch checked={isDarkMode} onChange={handleThemeToggle} />
                             </div>
                         </Card>
                         <Card>
-                            <h3 className="text-lg font-semibold text-foreground mb-4">Application Language</h3>
+                            <h3 className="text-lg font-semibold text-foreground mb-4">Langue de l'application</h3>
                             <Select value={language} onChange={handleLanguageChange}>
                                 <option value="en">English</option>
+                                <option value="fr">Français</option>
                                 <option value="ar">العربية (Arabic)</option>
                             </Select>
                         </Card>
@@ -163,7 +215,7 @@ const AdminSettings: React.FC = () => {
             </div>
         </div>
 
-        <Toast message="Settings saved successfully!" show={showToast} />
+        <Toast message="Paramètres enregistrés avec succès !" show={showToast} />
     </>
     );
 };

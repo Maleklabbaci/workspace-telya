@@ -1,44 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Folder, CheckSquare, DollarSign, Users, Shield, Briefcase, Settings, LayoutGrid, ClipboardCheck, User as UserIcon } from 'lucide-react';
 import { User } from '../types';
 import TelyaLogo from './TelyaLogo';
+import { getLocalUser } from '../lib/supabaseClient';
 
 const icons = { Home, Folder, CheckSquare, DollarSign, Users, Shield, Briefcase, Settings, LayoutGrid, ClipboardCheck, User: UserIcon };
 
 const Sidebar: React.FC = () => {
-  const user: User | null = JSON.parse(localStorage.getItem('telya_user') || 'null');
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    setUser(getLocalUser());
+  }, []);
 
   const mainNavItems = [
     // Employee & PM
-    { to: '/dashboard', label: 'Dashboard', icon: 'Home', roles: ['employee', 'project_manager'] },
-    { to: '/projects', label: 'Projects', icon: 'Folder', roles: ['employee', 'project_manager'] },
-    { to: '/tasks', label: 'My Tasks', icon: 'CheckSquare', roles: ['employee', 'project_manager'] },
+    { to: '/dashboard', label: 'Tableau de bord', icon: 'Home', roles: ['employee', 'project_manager'] },
+    { to: '/projects', label: 'Projets', icon: 'Folder', roles: ['employee', 'project_manager'] },
+    { to: '/tasks', label: 'Mes Tâches', icon: 'CheckSquare', roles: ['employee', 'project_manager'] },
     
     // PM Only
-    { to: '/billing', label: 'Billing', icon: 'DollarSign', roles: ['project_manager'] },
-    { to: '/team', label: 'Team', icon: 'Users', roles: ['project_manager'] },
+    { to: '/billing', label: 'Facturation', icon: 'DollarSign', roles: ['project_manager'] },
+    { to: '/team', label: 'Équipe', icon: 'Users', roles: ['project_manager'] },
     
     // Coordinator Only
-    { to: '/coordinator/dashboard', label: 'Coordinator Dash', icon: 'Home', roles: ['coordinator'] },
-    { to: '/coordinator/projects', label: 'Global View', icon: 'LayoutGrid', roles: ['coordinator'] },
-    { to: '/coordinator/team-tasks', label: 'Team Tasks', icon: 'ClipboardCheck', roles: ['coordinator'] },
+    { to: '/coordinator/dashboard', label: 'Tableau de bord Coord.', icon: 'Home', roles: ['coordinator'] },
+    { to: '/coordinator/projects', label: 'Vue Globale', icon: 'LayoutGrid', roles: ['coordinator'] },
+    { to: '/coordinator/team-tasks', label: 'Tâches Équipe', icon: 'ClipboardCheck', roles: ['coordinator'] },
     
     // Admin Only
-    { to: '/admin/dashboard', label: 'Dashboard', icon: 'Home', roles: ['admin'] },
+    { to: '/admin/dashboard', label: 'Tableau de bord', icon: 'Home', roles: ['admin'] },
     { to: '/admin/clients', label: 'Clients', icon: 'Users', roles: ['admin'] },
-    { to: '/admin/employees', label: 'Employees', icon: 'Briefcase', roles: ['admin'] },
-    { to: '/admin/projects', label: 'All Projects', icon: 'Folder', roles: ['admin'] },
-    { to: '/admin/invoices', label: 'Invoices', icon: 'DollarSign', roles: ['admin'] },
+    { to: '/admin/employees', label: 'Employés', icon: 'Briefcase', roles: ['admin'] },
+    { to: '/admin/projects', label: 'Tous les Projets', icon: 'Folder', roles: ['admin'] },
+    { to: '/admin/invoices', label: 'Factures', icon: 'DollarSign', roles: ['admin'] },
   ];
   
   const bottomNavItems = [
-      { to: '/profile', label: 'My Profile', icon: 'User', roles: ['admin', 'project_manager', 'employee', 'coordinator'] },
-      { to: '/admin/settings', label: 'Settings', icon: 'Settings', roles: ['admin'] },
+      { to: '/profile', label: 'Mon Profil', icon: 'User', roles: ['admin', 'project_manager', 'employee', 'coordinator'] },
+      { to: '/admin/settings', label: 'Paramètres', icon: 'Settings', roles: ['admin'] },
   ];
   
   const accessibleMainItems = mainNavItems.filter(item => user && item.roles.includes(user.role));
   const accessibleBottomItems = bottomNavItems.filter(item => user && item.roles.includes(user.role));
+
+  if (!user) {
+    return null; // or a loading skeleton
+  }
 
   return (
     <div className="hidden md:flex flex-col w-64 bg-card text-card-foreground border-r border-border">

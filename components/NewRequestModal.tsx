@@ -9,18 +9,17 @@ import { X } from 'lucide-react';
 interface NewRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onNewRequestSubmit: (request: { requestType: string; description: string; deadline: string }) => void;
 }
 
-const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose }) => {
+const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onNewRequestSubmit }) => {
     const [requestType, setRequestType] = useState('');
     const [description, setDescription] = useState('');
     const [deadline, setDeadline] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Here you would typically send the data to an API
-        console.log({ requestType, description, deadline });
-        alert('Votre demande a été envoyée ! Notre équipe vous contactera bientôt.');
+        onNewRequestSubmit({ requestType, description, deadline });
         onClose();
         // Reset form
         setRequestType('');

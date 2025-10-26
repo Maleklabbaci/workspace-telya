@@ -1,52 +1,130 @@
+
 import React, { useState, useEffect } from 'react';
-import { User, Project, Task } from '../types';
+import { User, Project, Task, Deliverable } from '../types';
 import Button from '../components/ui/Button';
 import ClientProjectCard from '../components/ClientProjectCard';
 import ProjectTasksModal from '../components/ProjectTasksModal';
 import NewRequestModal from '../components/NewRequestModal';
+import ClientDeliverableCard from '../components/ClientDeliverableCard';
+import Tabs from '../components/ui/Tabs';
+import Toast from '../components/ui/Toast';
 import { Plus } from 'lucide-react';
-
-// Mock Data for a specific client
-const getMockProjectsForClient = (clientId: string): Project[] => [
-  { id: 'p1', client_id: clientId, title: 'Shooting Hôtel Martinez', description: '...', pack: 'Gold', start_date: '2024-06-01', due_date: '2024-08-30', status: 'en tournage', percent_complete: 50, updated_at: '2024-07-28T10:00:00Z' },
-  { id: 'p2', client_id: clientId, title: 'Reels Promotion Juin', description: '...', pack: 'Standard', start_date: '2024-06-01', due_date: '2024-06-30', status: 'livré', percent_complete: 100, updated_at: '2024-06-29T15:30:00Z' },
-  { id: 'p3', client_id: clientId, title: 'Campagne Meta Ads Q3', description: '...', pack: 'Standard', start_date: '2024-07-01', due_date: '2024-09-30', status: 'en préparation', percent_complete: 15, updated_at: '2024-07-25T11:00:00Z' },
-];
-
-const mockTasks: Task[] = [
-    {id: 't-p1-1', project_id: 'p1', title: 'Jour 1 - Scènes Lobby', status: 'done', order_index: 1},
-    {id: 't-p1-2', project_id: 'p1', title: 'Jour 2 - Scènes Piscine & Plage', status: 'in_progress', order_index: 2},
-    {id: 't-p1-3', project_id: 'p1', title: 'Prises de vue drone', status: 'todo', order_index: 3},
-    {id: 't-p3-1', project_id: 'p3', title: 'Définition des audiences cibles', status: 'done', order_index: 1},
-    {id: 't-p3-2', project_id: 'p3', title: 'Création des visuels publicitaires', status: 'in_progress', order_index: 2},
-];
-
+// FIX: Correctly import saveProjects and saveDeliverables
+import { getProjects, getTasks, getDeliverables, saveProjects, saveDeliverables } from '../data/api';
+import dayjs from 'dayjs';
 
 const ClientDashboard: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const [projects, setProjects] = useState<Project[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
     const [isNewRequestModalOpen, setIsNewRequestModalOpen] = useState(false);
+    const [showToast, setShowToast] = useState(false);
+
+    // FIX: Make loadClientData async and await API calls
+    const loadClientData = async (currentUser: User) => {
+        const allProjects = await getProjects();
+        const clientProjects = allProjects.filter(p => p.client_id === currentUser.id);
+        setProjects(clientProjects);
+        
+        const clientProjectIds = new Set(clientProjects.map(p => p.id));
+        const allTasks = await getTasks();
+        setTasks(allTasks.filter(t => clientProjectIds.has(t.project_id)));
+        const allDeliverables = await getDeliverables();
+        setDeliverables(allDeliverables.filter(d => clientProjectIds.has(d.project_id)));
+    };
 
     useEffect(() => {
-        const currentUser: User = JSON.parse(localStorage.getItem('telya_user') || 'null');
+        const currentUser: User | null = JSON.parse(localStorage.getItem('telya_user') || 'null');
         if (currentUser) {
             setUser(currentUser);
-            setProjects(getMockProjectsForClient(currentUser.id));
+            loadClientData(currentUser);
         }
     }, []);
+    
+    // FIX: Make handleNewRequest async
+    const handleNewRequest = async ({ requestType, description, deadline }: { requestType: string; description: string; deadline: string }) => {
+        if (!user) return;
+        
+        const newProject: Project = {
+            id: `proj-req-${Date.now()}`,
+            client_id: user.id,
+            title: `Demande: ${requestType}`,
+            description: description,
+            pack: 'Essai', // Default pack for requests
+            start_date: dayjs().format('YYYY-MM-DD'),
+            due_date: deadline || dayjs().add(1, 'month').format('YYYY-MM-DD'),
+            status: 'draft',
+            percent_complete: 0,
+            updated_at: new Date().toISOString(),
+        };
+
+        const allProjects = await getProjects();
+        // FIX: Await saveProjects
+        await saveProjects([...allProjects, newProject]);
+        
+        // Refresh the project list from the source of truth
+        await loadClientData(user);
+
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+    };
+
 
     const handleOpenProjectDetails = (project: Project) => {
         setSelectedProject(project);
         setIsTasksModalOpen(true);
     };
+
+    // FIX: Make handleApproveDeliverable async
+    const handleApproveDeliverable = async (deliverableId: string) => {
+        const allDeliverables = await getDeliverables();
+        const updatedDeliverables = allDeliverables.map(d => 
+            d.id === deliverableId ? { ...d, status: 'approved' as 'approved' } : d
+        );
+        // FIX: Await saveDeliverables
+        await saveDeliverables(updatedDeliverables);
+        setDeliverables(prev => 
+            prev.map(d => d.id === deliverableId ? { ...d, status: 'approved' } : d)
+        );
+    };
     
-    const projectTasks = selectedProject ? mockTasks.filter(t => t.project_id === selectedProject.id) : [];
+    const projectTasks = selectedProject ? tasks.filter(t => t.project_id === selectedProject.id) : [];
 
     if (!user) {
-        return <div>Loading client data...</div>;
+        return <div>Chargement des données client...</div>;
     }
+
+    const projectsTab = (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {projects.map(project => (
+                <ClientProjectCard 
+                    key={project.id} 
+                    project={project} 
+                    onDetailsClick={() => handleOpenProjectDetails(project)}
+                />
+            ))}
+        </div>
+    );
+
+    const deliverablesTab = (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {deliverables.length > 0 ? deliverables.map(deliverable => (
+                <ClientDeliverableCard 
+                    key={deliverable.id}
+                    deliverable={deliverable}
+                    onApprove={handleApproveDeliverable}
+                />
+            )) : <p className="text-muted-foreground col-span-full text-center py-8">Aucun livrable n'a encore été téléversé pour vos projets.</p>}
+        </div>
+    );
+
+    const TABS = [
+        { label: 'Projets', content: projectsTab },
+        { label: `Livrables (${deliverables.length})`, content: deliverablesTab },
+    ];
 
     return (
         <>
@@ -61,15 +139,7 @@ const ClientDashboard: React.FC = () => {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {projects.map(project => (
-                    <ClientProjectCard 
-                        key={project.id} 
-                        project={project} 
-                        onDetailsClick={() => handleOpenProjectDetails(project)}
-                    />
-                ))}
-            </div>
+            <Tabs tabs={TABS} />
 
             <ProjectTasksModal 
                 isOpen={isTasksModalOpen}
@@ -81,7 +151,10 @@ const ClientDashboard: React.FC = () => {
             <NewRequestModal
                 isOpen={isNewRequestModalOpen}
                 onClose={() => setIsNewRequestModalOpen(false)}
+                onNewRequestSubmit={handleNewRequest}
             />
+            
+            <Toast message="Votre demande a été envoyée avec succès !" show={showToast} />
         </>
     );
 };

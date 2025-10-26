@@ -7,7 +7,8 @@ import Button from './ui/Button';
 import Toast from './ui/Toast';
 import Textarea from './ui/Textarea';
 import { X } from 'lucide-react';
-import { mockUsers } from '../data/mockData';
+// FIX: Correctly import saveProjects
+import { getUsers, getProjects, saveProjects } from '../data/api';
 
 interface AddProjectModalProps {
   isOpen: boolean;
@@ -32,11 +33,15 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
     });
     
     useEffect(() => {
-        // Load clients for dropdown
-        const allStoredUsers: User[] = JSON.parse(localStorage.getItem('telya_users') || '[]');
-        const allUsers = [...mockUsers, ...allStoredUsers];
-        const uniqueUsers = allUsers.filter((v,i,a)=>a.findIndex(t=>(t.email === v.email))===i);
-        setClients(uniqueUsers.filter(u => u.role === 'client'));
+        // FIX: Fetch clients asynchronously
+        const fetchClients = async () => {
+            const allUsers = await getUsers();
+            setClients(allUsers.filter(u => u.role === 'client'));
+        }
+        
+        if (isOpen) {
+            fetchClients();
+        }
 
         if (isEditing && projectToEdit) {
             setFormState({
@@ -76,16 +81,18 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
         onClose();
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // FIX: Make handleSubmit async to handle API calls
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         
         if (!formState.client_id) {
-            setError('Please select a client.');
+            setError('Veuillez sélectionner un client.');
             return;
         }
 
-        const storedProjects: Project[] = JSON.parse(localStorage.getItem('telya_projects') || '[]');
+        // FIX: Await project data
+        const storedProjects = await getProjects();
         
         if (isEditing && projectToEdit) {
             const updatedProject: Project = { ...projectToEdit, ...formState };
@@ -93,10 +100,10 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
             if (projectIndex !== -1) {
                 storedProjects[projectIndex] = updatedProject;
             } else {
-                // This handles editing a default mock project
                  storedProjects.push(updatedProject);
             }
-            localStorage.setItem('telya_projects', JSON.stringify(storedProjects));
+            // FIX: Await saving projects
+            await saveProjects(storedProjects);
 
         } else {
             const newProject: Project = {
@@ -105,8 +112,8 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
                 percent_complete: 0,
                 updated_at: new Date().toISOString(),
             };
-            const updatedProjects = [...storedProjects, newProject];
-            localStorage.setItem('telya_projects', JSON.stringify(updatedProjects));
+            // FIX: Await saving projects
+            await saveProjects([...storedProjects, newProject]);
         }
         
         setShowToast(true);
@@ -122,17 +129,17 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
           <form onSubmit={handleSubmit}>
             <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-foreground">{isEditing ? 'Edit Project' : 'Create New Project'}</h2>
+                    <h2 className="text-2xl font-bold text-foreground">{isEditing ? 'Modifier le Projet' : 'Créer un Nouveau Projet'}</h2>
                     <button type="button" onClick={handleClose} className="p-1 rounded-full hover:bg-accent">
                         <X className="w-6 h-6 text-muted-foreground" />
                     </button>
                 </div>
               
                 <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                    <Input label="Project Title" name="title" value={formState.title} onChange={handleInputChange} required />
+                    <Input label="Titre du Projet" name="title" value={formState.title} onChange={handleInputChange} required />
                     <Textarea label="Description" name="description" value={formState.description} onChange={handleInputChange} rows={3} required />
                     <Select label="Client" name="client_id" value={formState.client_id} onChange={handleInputChange} required>
-                        <option value="" disabled>Select a client...</option>
+                        <option value="" disabled>Sélectionner un client...</option>
                         {clients.map(client => (
                             <option key={client.id} value={client.id}>{client.company}</option>
                         ))}
@@ -144,28 +151,28 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
                             <option value="Gold">Gold</option>
                             <option value="Diamond">Diamond</option>
                         </Select>
-                         <Select label="Status" name="status" value={formState.status} onChange={handleInputChange}>
-                            <option value="draft">Draft</option>
-                            <option value="active">Active</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                             <option value="archived">Archived</option>
+                         <Select label="Statut" name="status" value={formState.status} onChange={handleInputChange}>
+                            <option value="draft">Brouillon</option>
+                            <option value="active">Actif</option>
+                            <option value="in_progress">En cours</option>
+                            <option value="completed">Terminé</option>
+                            <option value="archived">Archivé</option>
                         </Select>
                     </div>
                      <div className="grid grid-cols-2 gap-4">
-                        <Input type="date" label="Start Date" name="start_date" value={formState.start_date} onChange={handleInputChange} required />
-                        <Input type="date" label="Due Date" name="due_date" value={formState.due_date} onChange={handleInputChange} required />
+                        <Input type="date" label="Date de début" name="start_date" value={formState.start_date} onChange={handleInputChange} required />
+                        <Input type="date" label="Date de fin" name="due_date" value={formState.due_date} onChange={handleInputChange} required />
                     </div>
                     {error && <p className="text-red-500 text-sm">{error}</p>}
                 </div>
             </div>
             <div className="flex justify-end p-6 border-t border-border space-x-3 bg-secondary/50 rounded-b-2xl">
-                <Button type="button" variant="secondary" onClick={handleClose}>Cancel</Button>
-                <Button type="submit">{isEditing ? 'Save Changes' : 'Create Project'}</Button>
+                <Button type="button" variant="secondary" onClick={handleClose}>Annuler</Button>
+                <Button type="submit">{isEditing ? 'Enregistrer' : 'Créer le Projet'}</Button>
             </div>
           </form>
         </Modal>
-        <Toast message={`Project ${isEditing ? 'updated' : 'created'} successfully!`} show={showToast} type="success" />
+        <Toast message={`Projet ${isEditing ? 'mis à jour' : 'créé'} avec succès !`} show={showToast} type="success" />
     </>
   );
 };

@@ -1,29 +1,35 @@
+
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AddUserModal from '../components/AddUserModal';
-import { User } from '../types';
-import { mockUsers, mockTasks } from '../data/mockData';
+import { User, Task } from '../types';
+// FIX: Correctly import saveUsers
+import { getUsers, getTasks, saveUsers } from '../data/api';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 
 const AdminEmployees: React.FC = () => {
     const [employees, setEmployees] = useState<User[]>([]);
+    // FIX: Add state for tasks to use in getTaskCount
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
 
-    const loadEmployees = () => {
-        const allStoredUsers: User[] = JSON.parse(localStorage.getItem('telya_users') || '[]');
-        const allUsers = [...mockUsers, ...allStoredUsers];
-        const uniqueUsers = allUsers.filter((v,i,a)=>a.findIndex(t=>(t.email === v.email))===i);
-        setEmployees(uniqueUsers.filter(u => ['employee', 'project_manager', 'admin', 'coordinator'].includes(u.role)));
+    // FIX: Load both employees and tasks asynchronously
+    const loadData = async () => {
+        const allUsers = await getUsers();
+        setEmployees(allUsers.filter(u => ['employee', 'project_manager', 'admin', 'coordinator'].includes(u.role)));
+        const allTasks = await getTasks();
+        setTasks(allTasks);
     };
 
     useEffect(() => {
-        loadEmployees();
+        loadData();
     }, []);
 
     const getTaskCount = (employeeId: string) => {
-        return mockTasks.filter(t => t.assigned_to === employeeId).length;
+        // FIX: Use tasks from state
+        return tasks.filter(t => t.assigned_to === employeeId).length;
     };
     
     const handleEdit = (user: User) => {
@@ -31,12 +37,14 @@ const AdminEmployees: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (userId: string) => {
-        if (window.confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
-            const allStoredUsers: User[] = JSON.parse(localStorage.getItem('telya_users') || '[]');
-            const updatedUsers = allStoredUsers.filter(u => u.id !== userId);
-            localStorage.setItem('telya_users', JSON.stringify(updatedUsers));
-            loadEmployees();
+    // FIX: Make handleDelete async
+    const handleDelete = async (userId: string) => {
+        if (window.confirm('Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.')) {
+            const allUsers = await getUsers();
+            const updatedUsers = allUsers.filter(u => u.id !== userId);
+            // FIX: Await saveUsers
+            await saveUsers(updatedUsers);
+            loadData();
         }
     };
     
@@ -46,7 +54,7 @@ const AdminEmployees: React.FC = () => {
     };
     
     const handleModalSuccess = () => {
-        loadEmployees();
+        loadData();
         handleModalClose();
     };
 
@@ -63,11 +71,11 @@ const AdminEmployees: React.FC = () => {
       <div>
         <div className="flex justify-between items-center mb-6">
             <div>
-                <h1 className="text-3xl font-bold text-foreground">Manage Employees</h1>
-                <p className="mt-1 text-muted-foreground">View, add, or edit employee accounts and roles.</p>
+                <h1 className="text-3xl font-bold text-foreground">Gérer les Employés</h1>
+                <p className="mt-1 text-muted-foreground">Voir, ajouter ou modifier les comptes et les rôles des employés.</p>
             </div>
             <Button onClick={() => setIsModalOpen(true)}>
-                <PlusCircle className="w-5 h-5 mr-2" /> Add New Employee
+                <PlusCircle className="w-5 h-5 mr-2" /> Ajouter un employé
             </Button>
         </div>
 
@@ -76,10 +84,10 @@ const AdminEmployees: React.FC = () => {
               <table className="w-full text-left">
                   <thead>
                       <tr className="text-xs text-muted-foreground uppercase border-b border-border">
-                          <th className="py-3 px-4 font-semibold">Name</th>
-                          <th className="py-3 px-4 font-semibold">Role</th>
+                          <th className="py-3 px-4 font-semibold">Nom</th>
+                          <th className="py-3 px-4 font-semibold">Rôle</th>
                           <th className="py-3 px-4 font-semibold">Email</th>
-                          <th className="py-3 px-4 font-semibold text-center">Active Tasks</th>
+                          <th className="py-3 px-4 font-semibold text-center">Tâches Actives</th>
                           <th className="py-3 px-4 font-semibold">Actions</th>
                       </tr>
                   </thead>
@@ -104,10 +112,8 @@ const AdminEmployees: React.FC = () => {
                               <td className="py-3 px-4 text-center">{getTaskCount(employee.id)}</td>
                               <td className="py-3 px-4">
                                   <div className="flex items-center space-x-1">
-                                      {/* FIX: Removed unsupported 'size' prop. Sizing is handled by className. */}
-                                      <Button variant="ghost" onClick={() => handleEdit(employee)} className="!p-2"><Edit className="w-4 h-4" /></Button>
-                                      {/* FIX: Removed unsupported 'size' prop. Sizing is handled by className. */}
-                                      <Button variant="ghost" onClick={() => handleDelete(employee.id)} className="!p-2 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                                      <Button variant="ghost" onClick={() => handleEdit(employee)} className="!p-2" aria-label="Modifier"><Edit className="w-4 h-4" /></Button>
+                                      <Button variant="ghost" onClick={() => handleDelete(employee.id)} className="!p-2 text-muted-foreground hover:text-destructive" aria-label="Supprimer"><Trash2 className="w-4 h-4" /></Button>
                                   </div>
                               </td>
                           </tr>

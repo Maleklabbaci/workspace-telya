@@ -14,7 +14,8 @@
     "lucide-react": "^0.548.0",
     "react-router-dom": "^7.9.4",
     "dayjs": "^1.11.18",
-    "framer-motion": "^11.3.19"
+    "framer-motion": "^11.3.19",
+    "@supabase/supabase-js": "^2.76.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

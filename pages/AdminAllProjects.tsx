@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AddProjectModal from '../components/AddProjectModal';
 import { Project, User } from '../types';
-import { mockUsers, mockProjects as defaultProjects } from '../data/mockData';
+// FIX: Correctly import saveProjects
+import { getProjects, getUsers, saveProjects } from '../data/api';
 import { PlusCircle, Edit, Trash2, Search } from 'lucide-react';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
@@ -15,14 +17,10 @@ const AdminAllProjects: React.FC = () => {
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const loadData = () => {
-        const storedProjects: Project[] = JSON.parse(localStorage.getItem('telya_projects') || '[]');
-        const combinedProjects = [...defaultProjects, ...storedProjects];
-        setProjects(combinedProjects.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i));
-        
-        const storedUsers: User[] = JSON.parse(localStorage.getItem('telya_users') || '[]');
-        const combinedUsers = [...mockUsers, ...storedUsers];
-        setUsers(combinedUsers.filter((v,i,a)=>a.findIndex(t=>(t.email === v.email))===i));
+    // FIX: Make loadData async
+    const loadData = async () => {
+        setProjects(await getProjects());
+        setUsers(await getUsers());
     };
 
     useEffect(() => {
@@ -34,11 +32,13 @@ const AdminAllProjects: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (projectId: string) => {
-        if (window.confirm('Are you sure you want to delete this project? This will also delete associated tasks and cannot be undone.')) {
-            const storedProjects: Project[] = JSON.parse(localStorage.getItem('telya_projects') || '[]');
-            const updatedProjects = storedProjects.filter(p => p.id !== projectId);
-            localStorage.setItem('telya_projects', JSON.stringify(updatedProjects));
+    // FIX: Make handleDelete async
+    const handleDelete = async (projectId: string) => {
+        if (window.confirm('Êtes-vous sûr de vouloir supprimer ce projet ? Cela supprimera également les tâches associées et est irréversible.')) {
+            const allProjects = await getProjects();
+            const updatedProjects = allProjects.filter(p => p.id !== projectId);
+            // FIX: Await saveProjects
+            await saveProjects(updatedProjects);
             loadData();
         }
     };
@@ -65,11 +65,11 @@ const AdminAllProjects: React.FC = () => {
       <div>
         <div className="flex justify-between items-center mb-6">
             <div>
-                <h1 className="text-3xl font-bold text-foreground">All Projects</h1>
-                <p className="mt-1 text-muted-foreground">A complete overview of every project in the agency.</p>
+                <h1 className="text-3xl font-bold text-foreground">Tous les Projets</h1>
+                <p className="mt-1 text-muted-foreground">Un aperçu complet de chaque projet de l'agence.</p>
             </div>
             <Button onClick={() => setIsModalOpen(true)}>
-                <PlusCircle className="w-5 h-5 mr-2" /> New Project
+                <PlusCircle className="w-5 h-5 mr-2" /> Nouveau Projet
             </Button>
         </div>
         
@@ -79,7 +79,7 @@ const AdminAllProjects: React.FC = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input 
                         type="text"
-                        placeholder="Search by title or client..."
+                        placeholder="Rechercher par titre ou client..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         className="w-64 pl-10 pr-4 py-2 border border-border bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
@@ -90,11 +90,11 @@ const AdminAllProjects: React.FC = () => {
                 <table className="w-full text-left">
                     <thead>
                         <tr className="text-xs text-muted-foreground uppercase border-b border-border">
-                            <th className="py-3 px-4 font-semibold">Project Title</th>
+                            <th className="py-3 px-4 font-semibold">Titre du Projet</th>
                             <th className="py-3 px-4 font-semibold">Client</th>
-                            <th className="py-3 px-4 font-semibold">Status</th>
-                            <th className="py-3 px-4 font-semibold">Due Date</th>
-                            <th className="py-3 px-4 font-semibold">Progress</th>
+                            <th className="py-3 px-4 font-semibold">Statut</th>
+                            <th className="py-3 px-4 font-semibold">Échéance</th>
+                            <th className="py-3 px-4 font-semibold">Progression</th>
                             <th className="py-3 px-4 font-semibold">Actions</th>
                         </tr>
                     </thead>
@@ -106,7 +106,7 @@ const AdminAllProjects: React.FC = () => {
                                 </td>
                                 <td className="py-3 px-4">{getClientName(project.client_id)}</td>
                                 <td className="py-3 px-4 capitalize">{project.status.replace('_', ' ')}</td>
-                                <td className="py-3 px-4">{dayjs(project.due_date).format('MMM DD, YYYY')}</td>
+                                <td className="py-3 px-4">{dayjs(project.due_date).format('DD MMM YYYY')}</td>
                                 <td className="py-3 px-4">
                                     <div className="w-full bg-secondary rounded-full h-2.5">
                                         <div className="bg-primary h-2.5 rounded-full" style={{ width: `${project.percent_complete}%` }}></div>
@@ -114,10 +114,8 @@ const AdminAllProjects: React.FC = () => {
                                 </td>
                                 <td className="py-3 px-4">
                                     <div className="flex items-center space-x-1">
-                                        {/* FIX: Removed unsupported 'size' prop. Sizing is handled by className. */}
-                                        <Button variant="ghost" onClick={() => handleEdit(project)} className="!p-2"><Edit className="w-4 h-4" /></Button>
-                                        {/* FIX: Removed unsupported 'size' prop. Sizing is handled by className. */}
-                                        <Button variant="ghost" onClick={() => handleDelete(project.id)} className="!p-2 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                                        <Button variant="ghost" onClick={() => handleEdit(project)} className="!p-2" aria-label="Modifier"><Edit className="w-4 h-4" /></Button>
+                                        <Button variant="ghost" onClick={() => handleDelete(project.id)} className="!p-2 text-muted-foreground hover:text-destructive" aria-label="Supprimer"><Trash2 className="w-4 h-4" /></Button>
                                     </div>
                                 </td>
                             </tr>

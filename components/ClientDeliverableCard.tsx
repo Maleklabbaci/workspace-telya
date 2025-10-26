@@ -1,22 +1,24 @@
+
 import React from 'react';
 import { Deliverable } from '../types';
-import { FileText, Download, MessageSquare, CheckCircle, Clock } from 'lucide-react';
+import { Paperclip, Download, CheckCircle, Clock } from 'lucide-react';
 import dayjs from 'dayjs';
 import Button from './ui/Button';
 
-interface DeliverableCardProps {
+interface ClientDeliverableCardProps {
   deliverable: Deliverable;
+  onApprove: (deliverableId: string) => void;
 }
 
 const statusInfo = {
   pending: { icon: Clock, color: 'text-muted-foreground', label: 'En attente' },
   in_production: { icon: Clock, color: 'text-yellow-500', label: 'En Production' },
-  in_review: { icon: MessageSquare, color: 'text-blue-500', label: 'En Revue' },
+  in_review: { icon: Clock, color: 'text-blue-500', label: 'En Revue' },
   approved: { icon: CheckCircle, color: 'text-green-500', label: 'Approuvé' },
   final: { icon: CheckCircle, color: 'text-primary', label: 'Final' },
 };
 
-const DeliverableCard: React.FC<DeliverableCardProps> = ({ deliverable }) => {
+const ClientDeliverableCard: React.FC<ClientDeliverableCardProps> = ({ deliverable, onApprove }) => {
   const Icon = statusInfo[deliverable.status].icon;
 
   return (
@@ -25,7 +27,7 @@ const DeliverableCard: React.FC<DeliverableCardProps> = ({ deliverable }) => {
         <div className="flex justify-between items-start">
             <div>
                 <div className="flex items-center text-sm font-semibold text-muted-foreground">
-                    <FileText className="h-4 w-4 mr-2" />
+                    <Paperclip className="h-4 w-4 mr-2" />
                     <span className="uppercase">{deliverable.type}</span>
                 </div>
                 <h3 className="font-bold text-lg text-card-foreground mt-1">{deliverable.title}</h3>
@@ -42,18 +44,20 @@ const DeliverableCard: React.FC<DeliverableCardProps> = ({ deliverable }) => {
         </p>
 
         <div className="mt-6 flex space-x-3">
-          <Button variant="primary" className="flex-1">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Voir
-          </Button>
           <Button variant="secondary" className="flex-1">
             <Download className="h-4 w-4 mr-2" />
             Télécharger
           </Button>
+          {deliverable.status === 'in_review' && (
+             <Button variant="primary" className="flex-1" onClick={() => onApprove(deliverable.id)}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approuver
+            </Button>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export default DeliverableCard;
+export default ClientDeliverableCard;

@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+
+import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -12,7 +13,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ClientDashboard from './pages/ClientDashboard';
 import ClientLayout from './components/ClientLayout';
 import AdminDashboard from './pages/AdminDashboard';
-import AdminLayout from './components/AdminLayout';
 import AdminClients from './pages/AdminClients';
 import AdminEmployees from './pages/AdminEmployees';
 import AdminAllProjects from './pages/AdminAllProjects';
@@ -20,15 +20,8 @@ import AdminInvoices from './pages/AdminInvoices';
 import AdminSettings from './pages/AdminSettings';
 import CoordinatorDashboard from './pages/CoordinatorDashboard';
 import Profile from './pages/Profile';
-import { mockUsers as defaultUsers } from './data/mockData';
 
 function App() {
-  // Prime local storage with default users for Profile page logic to work
-  useEffect(() => {
-    if (!localStorage.getItem('telya_default_users')) {
-      localStorage.setItem('telya_default_users', JSON.stringify(defaultUsers));
-    }
-  }, []);
 
   return (
     <HashRouter>
@@ -41,7 +34,7 @@ function App() {
           path="/admin"
           element={
             <ProtectedRoute roles={['admin']}>
-              <AdminLayout />
+              <Layout />
             </ProtectedRoute>
           }
         >

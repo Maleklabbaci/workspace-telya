@@ -1,5 +1,5 @@
 {
   "name": "Telya - Project Management Platform",
-  "description": "An autonomous web platform to manage briefs, projects, tasks, deliverables, client validation, team dashboard, and invoicing — without external dependencies.",
+  "description": "Une plateforme web autonome pour gérer les briefs, projets, tâches, livrables, validation client, tableau de bord d'équipe et facturation — sans dépendances externes.",
   "requestFramePermissions": []
 }

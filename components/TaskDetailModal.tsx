@@ -60,7 +60,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="w-full max-w-4xl max-h-[90vh] flex flex-col">
       <div className="flex justify-between items-center p-6 border-b border-border">
-          <h2 className="text-2xl font-bold text-foreground">Task Details</h2>
+          <h2 className="text-2xl font-bold text-foreground">Détails de la Tâche</h2>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-accent">
               <X className="w-6 h-6 text-muted-foreground" />
           </button>
@@ -77,11 +77,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             label="Description"
             value={editableTask.description || ''}
             onChange={(e) => handleInputChange('description', e.target.value)}
-            placeholder="Add a more detailed description..."
+            placeholder="Ajouter une description plus détaillée..."
           />
           
           <div>
-            <h3 className="text-lg font-semibold text-foreground mb-4">Activity</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Activité</h3>
             <div className="space-y-4">
                {taskComments.map(comment => (
                    <div key={comment.id} className="flex items-start space-x-3">
@@ -104,11 +104,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     <Textarea 
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Write a comment..."
+                        placeholder="Écrire un commentaire..."
                         rows={2}
                     />
                     <div className="flex justify-end mt-2">
-                         <Button onClick={handleAddComment} disabled={!newComment.trim()}>Comment</Button>
+                         <Button onClick={handleAddComment} disabled={!newComment.trim()}>Commenter</Button>
                     </div>
                 </div>
             </div>
@@ -118,19 +118,19 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         {/* Left Column for Metadata */}
         <div className="col-span-3 md:col-span-1 space-y-6">
             <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Status</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Statut</h4>
               <Select 
                 value={editableTask.status} 
                 onChange={(e) => handleInputChange('status', e.target.value as TaskStatus)}
               >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="review">In Review</option>
-                <option value="done">Done</option>
+                <option value="todo">À Faire</option>
+                <option value="in_progress">En Cours</option>
+                <option value="review">En Revue</option>
+                <option value="done">Terminé</option>
               </Select>
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Assignee</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Assigné à</h4>
               <AssigneeSelector
                 assignedTo={editableTask.assigned_to}
                 projectMembers={projectMembers}
@@ -138,7 +138,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Due Date</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Échéance</h4>
               <Input
                 type="date"
                 value={editableTask.due_date ? dayjs(editableTask.due_date).format('YYYY-MM-DD') : ''}
@@ -148,8 +148,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         </div>
       </div>
       <div className="flex justify-end p-6 border-t border-border space-x-3 bg-secondary/50 rounded-b-2xl">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={handleSave}>Save Changes</Button>
+          <Button variant="secondary" onClick={onClose}>Annuler</Button>
+          <Button variant="primary" onClick={handleSave}>Enregistrer</Button>
       </div>
     </Modal>
   );

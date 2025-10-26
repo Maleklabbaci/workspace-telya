@@ -3,10 +3,11 @@ import { User, Project, ProjectStatus } from '../types';
 import Card from '../components/ui/Card';
 import { Users, FolderKanban, Wallet, ClipboardCheck, PlusCircle, UserPlus, FileText, Filter, Zap, Check, X } from 'lucide-react';
 import Button from '../components/ui/Button';
-import { mockUsers, mockProjects as defaultProjects, mockDeliverables } from '../data/mockData';
+// FIX: Correctly import saveUsers
+import { getDeliverables, getProjects, getUsers, saveUsers } from '../data/api';
 import dayjs from 'dayjs';
 import AddUserModal from '../components/AddUserModal';
-import AddProjectModal from '../components/AddProjectModal'; // New Import
+import AddProjectModal from '../components/AddProjectModal';
 import { useNavigate } from 'react-router-dom';
 
 const statusStyles: { [key in Project['status']]: string } = {
@@ -22,10 +23,10 @@ const statusStyles: { [key in Project['status']]: string } = {
 };
 
 const mockActivity = [
-    { id: 1, user: 'Videaste', action: 'uploaded a new deliverable for', target: 'Luxury Villa Showcase', time: '2h ago' },
-    { id: 2, user: 'Client Aura', action: 'approved the deliverable', target: 'Logo Concepts (Round 1)', time: '5h ago' },
-    { id: 3, user: 'Abdelmalek', action: 'assigned a new task to Editor in', target: 'Brand Identity - Aura Watches', time: '1d ago' },
-    { id: 4, user: 'Admin Telya', action: 'added a new client', target: 'Downtown Arch Inc.', time: '2d ago' },
+    { id: 1, user: 'Videaste', action: 'a téléversé un nouveau livrable pour', target: 'Luxury Villa Showcase', time: 'il y a 2h' },
+    { id: 2, user: 'Client Aura', action: 'a approuvé le livrable', target: 'Concepts Logo (V1)', time: 'il y a 5h' },
+    { id: 3, user: 'Abdelmalek', action: 'a assigné une nouvelle tâche à Monteur dans', target: 'Brand Identity - Aura Watches', time: 'il y a 1j' },
+    { id: 4, user: 'Admin Telya', action: 'a ajouté un nouveau client', target: 'Downtown Arch Inc.', time: 'il y a 2j' },
 ];
 
 const MetricCard: React.FC<{ icon: React.ReactElement<{ className?: string }>; title: string; value: string | number; iconBg: string; iconColor: string; }> = ({ icon, title, value, iconBg, iconColor }) => (
@@ -55,34 +56,36 @@ const AdminDashboard: React.FC = () => {
     const [pendingEmployees, setPendingEmployees] = useState<User[]>([]);
     const [pendingClients, setPendingClients] = useState<User[]>([]);
     const [allProjects, setAllProjects] = useState<Project[]>([]);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
 
-    const loadData = () => {
-        const allStoredUsers: User[] = JSON.parse(localStorage.getItem('telya_users') || '[]');
-        const allUsers = [...mockUsers, ...allStoredUsers];
-        const uniqueUsers = allUsers.filter((v,i,a)=>a.findIndex(t=>(t.email === v.email))===i);
-        
-        const allStoredProjects: Project[] = JSON.parse(localStorage.getItem('telya_projects') || '[]');
-        const combinedProjects = [...defaultProjects, ...allStoredProjects];
-        const uniqueProjects = combinedProjects.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
-        setAllProjects(uniqueProjects);
+    // FIX: Make loadData async and await API calls
+    const loadData = async () => {
+        const users = await getUsers();
+        const projects = await getProjects();
+        const deliverables = await getDeliverables();
 
-        setTotalClients(uniqueUsers.filter(u => u.role === 'client' && u.status === 'active').length);
-        setActiveProjects(uniqueProjects.filter(p => ['active', 'in_progress', 'en tournage', 'en montage'].includes(p.status)).length);
-        setPendingReviews(mockDeliverables.filter(d => d.status === 'in_review').length);
-        setPendingEmployees(uniqueUsers.filter(u => u.role !== 'client' && u.status === 'pending_validation'));
-        setPendingClients(uniqueUsers.filter(u => u.role === 'client' && u.status === 'pending_validation'));
+        setAllUsers(users);
+        setAllProjects(projects);
+
+        setTotalClients(users.filter(u => u.role === 'client' && u.status === 'active').length);
+        setActiveProjects(projects.filter(p => ['active', 'in_progress', 'en tournage', 'en montage'].includes(p.status)).length);
+        setPendingReviews(deliverables.filter(d => d.status === 'in_review').length);
+        setPendingEmployees(users.filter(u => u.role !== 'client' && u.status === 'pending_validation'));
+        setPendingClients(users.filter(u => u.role === 'client' && u.status === 'pending_validation'));
     };
 
     useEffect(() => {
         loadData();
     }, []);
     
-    const handleApprovalAction = (userId: string, newStatus: 'active' | 'rejected') => {
-        const allStoredUsers: User[] = JSON.parse(localStorage.getItem('telya_users') || '[]');
-        const userIndex = allStoredUsers.findIndex(u => u.id === userId);
+    // FIX: Make handleApprovalAction async
+    const handleApprovalAction = async (userId: string, newStatus: 'active' | 'rejected') => {
+        const users = await getUsers();
+        const userIndex = users.findIndex(u => u.id === userId);
         if (userIndex !== -1) {
-            allStoredUsers[userIndex].status = newStatus;
-            localStorage.setItem('telya_users', JSON.stringify(allStoredUsers));
+            users[userIndex].status = newStatus;
+            // FIX: Await saveUsers
+            await saveUsers(users);
             loadData();
         }
     };
@@ -95,36 +98,34 @@ const AdminDashboard: React.FC = () => {
         .slice(0, 5);
 
     const getClientName = (clientId: string) => {
-        const allStoredUsers: User[] = JSON.parse(localStorage.getItem('telya_users') || '[]');
-        const allUsers = [...mockUsers, ...allStoredUsers];
         return allUsers.find(u => u.id === clientId)?.company || 'N/A';
     }
 
   return (
     <>
         <div>
-            <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="mt-1 text-muted-foreground">Welcome, {user.name}. Here's the agency overview.</p>
+            <h1 className="text-3xl font-bold text-foreground">Tableau de Bord Admin</h1>
+            <p className="mt-1 text-muted-foreground">Bienvenue, {user.name}. Voici un aperçu de l'agence.</p>
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <MetricCard icon={<Users />} title="Total Clients" value={totalClients} iconBg="bg-blue-500/10" iconColor="text-blue-500" />
-                 <MetricCard icon={<FolderKanban />} title="Active Projects" value={activeProjects} iconBg="bg-green-500/10" iconColor="text-green-500" />
-                 <MetricCard icon={<ClipboardCheck />} title="Pending Reviews" value={pendingReviews} iconBg="bg-yellow-500/10" iconColor="text-yellow-500" />
-                 <MetricCard icon={<Wallet />} title="Revenue (Month)" value={monthlyRevenue} iconBg="bg-primary/10" iconColor="text-primary" />
+                 <MetricCard icon={<Users />} title="Clients Actifs" value={totalClients} iconBg="bg-blue-500/10" iconColor="text-blue-500" />
+                 <MetricCard icon={<FolderKanban />} title="Projets Actifs" value={activeProjects} iconBg="bg-green-500/10" iconColor="text-green-500" />
+                 <MetricCard icon={<ClipboardCheck />} title="Validations en Attente" value={pendingReviews} iconBg="bg-yellow-500/10" iconColor="text-yellow-500" />
+                 <MetricCard icon={<Wallet />} title="Revenu (Mois)" value={monthlyRevenue} iconBg="bg-primary/10" iconColor="text-primary" />
             </div>
 
             {pendingClients.length > 0 && (
                  <Card className="mt-10">
-                    <h2 className="text-xl font-bold text-foreground mb-4">Pending Client Approvals ({pendingClients.length})</h2>
+                    <h2 className="text-xl font-bold text-foreground mb-4">Approbations Client en Attente ({pendingClients.length})</h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="text-xs text-muted-foreground uppercase border-b border-border">
-                                    <th className="py-2 px-4 font-semibold">Company</th>
-                                    <th className="py-2 px-4 font-semibold">Contact Name</th>
-                                    <th className="py-2 px-4 font-semibold">Contact Details</th>
-                                    <th className="py-2 px-4 font-semibold">Sector</th>
-                                    <th className="py-2 px-4 font-semibold">Registered</th>
+                                    <th className="py-2 px-4 font-semibold">Entreprise</th>
+                                    <th className="py-2 px-4 font-semibold">Nom du Contact</th>
+                                    <th className="py-2 px-4 font-semibold">Coordonnées</th>
+                                    <th className="py-2 px-4 font-semibold">Secteur</th>
+                                    <th className="py-2 px-4 font-semibold">Inscrit le</th>
                                     <th className="py-2 px-4 font-semibold">Actions</th>
                                 </tr>
                             </thead>
@@ -135,11 +136,11 @@ const AdminDashboard: React.FC = () => {
                                         <td className="py-3 px-4">{u.name}</td>
                                         <td className="py-3 px-4 text-sm">{u.contactEmail}<br/>{u.phone}</td>
                                         <td className="py-3 px-4 text-sm">{u.sector}</td>
-                                        <td className="py-3 px-4 text-sm">{dayjs(u.registeredAt).format('MMM DD, YYYY')}</td>
+                                        <td className="py-3 px-4 text-sm">{dayjs(u.registeredAt).format('DD MMM YYYY')}</td>
                                         <td className="py-3 px-4">
                                             <div className="flex space-x-2">
-                                                <Button onClick={() => handleApprovalAction(u.id, 'active')} variant="primary" className="!px-3 !py-1 text-sm flex items-center"><Check className="w-4 h-4 mr-1"/> Validate</Button>
-                                                <Button onClick={() => handleApprovalAction(u.id, 'rejected')} variant="danger" className="!px-3 !py-1 text-sm flex items-center"><X className="w-4 h-4 mr-1"/> Refuse</Button>
+                                                <Button onClick={() => handleApprovalAction(u.id, 'active')} variant="primary" className="!px-3 !py-1 text-sm flex items-center"><Check className="w-4 h-4 mr-1"/> Valider</Button>
+                                                <Button onClick={() => handleApprovalAction(u.id, 'rejected')} variant="danger" className="!px-3 !py-1 text-sm flex items-center"><X className="w-4 h-4 mr-1"/> Refuser</Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -152,15 +153,15 @@ const AdminDashboard: React.FC = () => {
 
             {pendingEmployees.length > 0 && (
                  <Card className="mt-10">
-                    <h2 className="text-xl font-bold text-foreground mb-4">Pending Employee Approvals ({pendingEmployees.length})</h2>
+                    <h2 className="text-xl font-bold text-foreground mb-4">Approbations Employé en Attente ({pendingEmployees.length})</h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="text-xs text-muted-foreground uppercase border-b border-border">
-                                    <th className="py-2 px-4 font-semibold">Name</th>
-                                    <th className="py-2 px-4 font-semibold">Role</th>
+                                    <th className="py-2 px-4 font-semibold">Nom</th>
+                                    <th className="py-2 px-4 font-semibold">Rôle</th>
                                     <th className="py-2 px-4 font-semibold">Contact</th>
-                                    <th className="py-2 px-4 font-semibold">Registered</th>
+                                    <th className="py-2 px-4 font-semibold">Inscrit le</th>
                                     <th className="py-2 px-4 font-semibold">Portfolio</th>
                                     <th className="py-2 px-4 font-semibold">Actions</th>
                                 </tr>
@@ -171,14 +172,14 @@ const AdminDashboard: React.FC = () => {
                                         <td className="py-3 px-4 font-semibold">{u.name}</td>
                                         <td className="py-3 px-4">{u.jobTitle}</td>
                                         <td className="py-3 px-4 text-sm">{u.contactEmail}<br/>{u.phone}</td>
-                                        <td className="py-3 px-4 text-sm">{dayjs(u.registeredAt).format('MMM DD, YYYY')}</td>
+                                        <td className="py-3 px-4 text-sm">{dayjs(u.registeredAt).format('DD MMM YYYY')}</td>
                                         <td className="py-3 px-4">
-                                            {u.portfolioUrl ? <a href={u.portfolioUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm font-semibold">View</a> : 'N/A'}
+                                            {u.portfolioUrl ? <a href={u.portfolioUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm font-semibold">Voir</a> : 'N/A'}
                                         </td>
                                         <td className="py-3 px-4">
                                             <div className="flex space-x-2">
-                                                <Button onClick={() => handleApprovalAction(u.id, 'active')} variant="primary" className="!px-3 !py-1 text-sm flex items-center"><Check className="w-4 h-4 mr-1"/> Validate</Button>
-                                                <Button onClick={() => handleApprovalAction(u.id, 'rejected')} variant="danger" className="!px-3 !py-1 text-sm flex items-center"><X className="w-4 h-4 mr-1"/> Refuse</Button>
+                                                <Button onClick={() => handleApprovalAction(u.id, 'active')} variant="primary" className="!px-3 !py-1 text-sm flex items-center"><Check className="w-4 h-4 mr-1"/> Valider</Button>
+                                                <Button onClick={() => handleApprovalAction(u.id, 'rejected')} variant="danger" className="!px-3 !py-1 text-sm flex items-center"><X className="w-4 h-4 mr-1"/> Refuser</Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -192,14 +193,14 @@ const AdminDashboard: React.FC = () => {
             <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <Card className="lg:col-span-2">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-foreground">Recent Projects</h2>
+                        <h2 className="text-xl font-bold text-foreground">Projets Récents</h2>
                         <div className="flex items-center space-x-2">
                             <Filter className="w-4 h-4 text-muted-foreground" />
                             <select onChange={(e) => setProjectFilter(e.target.value as any)} value={projectFilter} className="bg-transparent text-sm font-semibold text-muted-foreground focus:outline-none appearance-none">
-                                <option value="all">All Statuses</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="active">Active</option>
-                                <option value="completed">Completed</option>
+                                <option value="all">Tous les statuts</option>
+                                <option value="in_progress">En cours</option>
+                                <option value="active">Actif</option>
+                                <option value="completed">Terminé</option>
                             </select>
                         </div>
                     </div>
@@ -207,10 +208,10 @@ const AdminDashboard: React.FC = () => {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="text-xs text-muted-foreground uppercase border-b border-border">
-                                    <th className="py-2 px-4 font-semibold">Project Title</th>
+                                    <th className="py-2 px-4 font-semibold">Titre du Projet</th>
                                     <th className="py-2 px-4 font-semibold">Client</th>
-                                    <th className="py-2 px-4 font-semibold">Status</th>
-                                    <th className="py-2 px-4 font-semibold">Due Date</th>
+                                    <th className="py-2 px-4 font-semibold">Statut</th>
+                                    <th className="py-2 px-4 font-semibold">Échéance</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -223,7 +224,7 @@ const AdminDashboard: React.FC = () => {
                                                 {project.status.replace('_', ' ')}
                                             </span>
                                         </td>
-                                        <td className="py-3 px-4">{dayjs(project.due_date).format('MMM DD, YYYY')}</td>
+                                        <td className="py-3 px-4">{dayjs(project.due_date).format('DD MMM YYYY')}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -233,22 +234,22 @@ const AdminDashboard: React.FC = () => {
 
                 <div className="space-y-8">
                      <Card>
-                        <h2 className="text-xl font-bold text-foreground mb-4">Quick Actions</h2>
+                        <h2 className="text-xl font-bold text-foreground mb-4">Actions Rapides</h2>
                         <div className="flex flex-col space-y-3">
                             <Button onClick={() => setIsAddUserModalOpen(true)} variant="secondary" className="w-full justify-start !py-3">
-                                <UserPlus className="w-5 h-5 mr-3"/> Add New User
+                                <UserPlus className="w-5 h-5 mr-3"/> Ajouter un utilisateur
                             </Button>
                             <Button onClick={() => setIsAddProjectModalOpen(true)} variant="secondary" className="w-full justify-start !py-3">
-                               <PlusCircle className="w-5 h-5 mr-3"/> Create Project
+                               <PlusCircle className="w-5 h-5 mr-3"/> Créer un projet
                             </Button>
                             <Button to="/admin/invoices" variant="secondary" className="w-full justify-start !py-3">
-                               <FileText className="w-5 h-5 mr-3"/> View Financials
+                               <FileText className="w-5 h-5 mr-3"/> Voir les finances
                             </Button>
                         </div>
                     </Card>
 
                      <Card>
-                        <h2 className="text-xl font-bold text-foreground mb-4">Recent Activity</h2>
+                        <h2 className="text-xl font-bold text-foreground mb-4">Activité Récente</h2>
                          <ul className="space-y-4">
                             {mockActivity.map(item => (
                                  <li key={item.id} className="flex items-start text-sm">

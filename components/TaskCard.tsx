@@ -1,5 +1,4 @@
 import React from 'react';
-// FIX: Import the 'User' type to resolve a type error in the component's props.
 import { Task, User } from '../types';
 import dayjs from 'dayjs';
 import { Calendar } from 'lucide-react';

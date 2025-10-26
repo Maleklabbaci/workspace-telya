@@ -45,10 +45,10 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({ assignedTo, project
             src={assignedUser.avatar_url || `https://i.pravatar.cc/150?u=${assignedUser.id}`}
             alt={assignedUser.name}
             className="h-8 w-8 rounded-full"
-            title={`Assigned to ${assignedUser.name}`}
+            title={`Assigné à ${assignedUser.name}`}
           />
         ) : (
-          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center hover:bg-accent" title="Assign user">
+          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center hover:bg-accent" title="Assigner un utilisateur">
             <UserIcon size={16} className="text-muted-foreground" />
           </div>
         )}
@@ -56,7 +56,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({ assignedTo, project
 
       {isOpen && (
         <div className="absolute z-10 right-0 mt-2 w-56 bg-card rounded-md shadow-lg py-1 ring-1 ring-border">
-          <div className="px-4 py-2 text-xs font-semibold text-muted-foreground border-b border-border">Assign to...</div>
+          <div className="px-4 py-2 text-xs font-semibold text-muted-foreground border-b border-border">Assigner à...</div>
           <ul>
             <li>
               <button 
@@ -66,7 +66,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({ assignedTo, project
                  <div className="h-6 w-6 mr-3 rounded-full bg-secondary flex items-center justify-center">
                     <UserX size={14} className="text-muted-foreground" />
                  </div>
-                Unassign
+                Désassigner
                 {!assignedTo && <Check size={16} className="ml-auto text-primary" />}
               </button>
             </li>

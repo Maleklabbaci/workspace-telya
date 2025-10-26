@@ -3,8 +3,10 @@ import { Project } from '../types';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/fr';
 
 dayjs.extend(relativeTime);
+dayjs.locale('fr');
 
 interface ProjectCardProps {
   project: Project;
@@ -38,8 +40,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
           <div className="bg-primary h-2.5 rounded-full" style={{ width: `${project.percent_complete}%` }}></div>
         </div>
         <div className="flex justify-between text-sm text-muted-foreground">
-          <span>{project.percent_complete}% Complete</span>
-          <span>Due {dayjs(project.due_date).fromNow()}</span>
+          <span>{project.percent_complete}% Terminé</span>
+          <span>Échéance {dayjs(project.due_date).fromNow()}</span>
         </div>
       </div>
     </Link>

@@ -1,7 +1,8 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { User, UserRole } from '../types';
+import { supabase, getLocalUser } from '../lib/supabaseClient';
+import Spinner from './ui/Spinner';
 
 interface ProtectedRouteProps {
   children: React.ReactElement;
@@ -9,19 +10,53 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, roles }) => {
-  const token = localStorage.getItem('telya_token');
-  const userString = localStorage.getItem('telya_user');
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const location = useLocation();
 
-  if (!token || !userString) {
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+      setSessionChecked(true);
+    };
+    
+    checkSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (!sessionChecked) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
-  const user: User = JSON.parse(userString);
+  const user: User | null = getLocalUser();
 
+  if (!user) {
+    // This can happen briefly during a redirect after login
+    return (
+        <div className="flex h-screen items-center justify-center">
+            <Spinner />
+        </div>
+    );
+  }
+  
   if (roles && roles.length > 0 && !roles.includes(user.role)) {
-     // User has wrong role, redirect to their default dashboard
-     let defaultPath = '/dashboard'; // Default for employee/pm
+     let defaultPath = '/dashboard'; 
      if (user.role === 'client') {
         defaultPath = '/client/dashboard';
      } else if (user.role === 'admin') {
@@ -30,14 +65,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, roles }) => {
         defaultPath = '/coordinator/dashboard';
      }
      
-     // Prevent redirect loops if they are already at their dashboard
      if (location.pathname === defaultPath) {
         return children;
      }
 
      return <Navigate to={defaultPath} replace />;
   }
-
 
   return children;
 };

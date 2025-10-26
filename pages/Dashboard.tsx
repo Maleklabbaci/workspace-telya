@@ -3,49 +3,52 @@ import { Project, User, Task } from '../types';
 import ProjectCard from '../components/ProjectCard';
 import { motion } from 'framer-motion';
 import { Palette, Camera, Film, MessageSquare, Briefcase, Code, UserCheck, Star, CheckCircle } from 'lucide-react';
-import { mockProjects as allProjects, mockTasks as allTasks } from '../data/mockData';
+// FIX: Correctly import saveTasks
+import { getProjects, getTasks, saveTasks } from '../data/api';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-
-const getStoredTasks = (): Task[] => {
-    const stored = localStorage.getItem('telya_tasks');
-    return stored ? JSON.parse(stored) : allTasks;
-};
-
-const updateStoredTask = (updatedTask: Task) => {
-    const tasks = getStoredTasks();
-    const taskIndex = tasks.findIndex(t => t.id === updatedTask.id);
-    if (taskIndex !== -1) {
-        tasks[taskIndex] = updatedTask;
-        localStorage.setItem('telya_tasks', JSON.stringify(tasks));
-    }
-};
-
 
 const DesignerDashboard: React.FC<{ user: User }> = ({ user }) => {
     const [myTask, setMyTask] = useState<Task | null>(null);
     const [project, setProject] = useState<Project | null>(null);
     
     useEffect(() => {
-        const tasks = getStoredTasks();
-        const assignedTask = tasks.find(t => t.assigned_to === user.id && t.status === 'in_progress');
-        if (assignedTask) {
-            setMyTask(assignedTask);
-            setProject(allProjects.find(p => p.id === assignedTask.project_id) || null);
-        } else {
-             const reviewTask = tasks.find(t => t.assigned_to === user.id && t.status === 'review');
-             if(reviewTask) {
-                setMyTask(reviewTask);
-                setProject(allProjects.find(p => p.id === reviewTask.project_id) || null);
-             }
-        }
+        // FIX: Make data fetching async
+        const fetchData = async () => {
+            const tasks = await getTasks();
+            const allProjects = await getProjects();
+            // FIX: Call .find on the resolved array
+            const assignedTask = tasks.find(t => t.assigned_to === user.id && t.status === 'in_progress');
+            if (assignedTask) {
+                setMyTask(assignedTask);
+                // FIX: Call .find on the resolved array
+                setProject(allProjects.find(p => p.id === assignedTask.project_id) || null);
+            } else {
+                 // FIX: Call .find on the resolved array
+                 const reviewTask = tasks.find(t => t.assigned_to === user.id && t.status === 'review');
+                 if(reviewTask) {
+                    setMyTask(reviewTask);
+                    // FIX: Call .find on the resolved array
+                    setProject(allProjects.find(p => p.id === reviewTask.project_id) || null);
+                 }
+            }
+        };
+        fetchData();
     }, [user.id]);
 
-    const handleCompleteTask = () => {
+    // FIX: Make handler async
+    const handleCompleteTask = async () => {
         if (myTask) {
             const updatedTask = { ...myTask, status: 'review' as 'review' };
-            updateStoredTask(updatedTask);
-            setMyTask(updatedTask);
+            const allTasks = await getTasks();
+            // FIX: Call .findIndex on the resolved array
+            const taskIndex = allTasks.findIndex(t => t.id === myTask.id);
+            if (taskIndex !== -1) {
+                allTasks[taskIndex] = updatedTask;
+                // FIX: Await saveTasks
+                await saveTasks(allTasks);
+                setMyTask(updatedTask);
+            }
         }
     };
     
@@ -56,16 +59,16 @@ const DesignerDashboard: React.FC<{ user: User }> = ({ user }) => {
                     <Palette className="w-8 h-8 text-primary" />
                 </div>
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground">Designer Dashboard</h2>
-                    <p className="text-muted-foreground">Focus on your design tasks and submit your best work.</p>
+                    <h2 className="text-2xl font-bold text-foreground">Tableau de Bord Designer</h2>
+                    <p className="text-muted-foreground">Concentrez-vous sur vos tâches de design et soumettez votre meilleur travail.</p>
                 </div>
             </div>
 
             {myTask && project ? (
                  <div className="mt-6 border-t border-border pt-6">
-                    <h3 className="text-lg font-semibold text-muted-foreground">Your Priority Task</h3>
+                    <h3 className="text-lg font-semibold text-muted-foreground">Votre Tâche Prioritaire</h3>
                     <div className="mt-2 p-4 border border-border rounded-lg bg-background">
-                        <p className="font-semibold text-muted-foreground text-sm">Project: <span className="text-foreground font-bold">{project.title}</span></p>
+                        <p className="font-semibold text-muted-foreground text-sm">Projet: <span className="text-foreground font-bold">{project.title}</span></p>
                         <p className="text-xl font-bold my-2 text-foreground">{myTask.title}</p>
                         
                         {myTask.status === 'in_progress' && (
@@ -84,7 +87,7 @@ const DesignerDashboard: React.FC<{ user: User }> = ({ user }) => {
                     </div>
                  </div>
             ) : (
-                <p className="mt-6 text-center text-muted-foreground">You have no active tasks assigned. Well done!</p>
+                <p className="mt-6 text-center text-muted-foreground">Vous n'avez aucune tâche active assignée. Bravo !</p>
             )}
         </Card>
     )
@@ -92,22 +95,34 @@ const DesignerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
 
 const GenericDashboard: React.FC<{ user: User }> = ({ user }) => {
+  // FIX: Fetch projects and store in state
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+        const projects = await getProjects();
+        setAllProjects(projects);
+    };
+    fetchProjects();
+  }, []);
+
+
   const RoleSpecificContent: React.FC<{ jobTitle?: string }> = ({ jobTitle }) => {
     switch (jobTitle) {
         case 'Filmmaker/Photographer':
-            return <DashboardSection icon={<Camera />} title="Filmmaker's Corner" description="Plan your shoots and manage your captures." />;
+            return <DashboardSection icon={<Camera />} title="Coin du Cinéaste" description="Planifiez vos tournages et gérez vos prises de vue." />;
         case 'Video Editor':
-            return <DashboardSection icon={<Film />} title="Editing Suite" description="Your projects are ready for the final cut." />;
+            return <DashboardSection icon={<Film />} title="Suite de Montage" description="Vos projets sont prêts pour le montage final." />;
         case 'Community Manager':
-            return <DashboardSection icon={<MessageSquare />} title="Engagement Central" description="Manage social calendars and track performance." />;
+            return <DashboardSection icon={<MessageSquare />} title="Pôle d'Engagement" description="Gérez les calendriers sociaux et suivez les performances." />;
         case 'Commercial':
-            return <DashboardSection icon={<Briefcase />} title="Sales Dashboard" description="Track your prospects, deals, and conversions." />;
+            return <DashboardSection icon={<Briefcase />} title="Tableau de Bord Commercial" description="Suivez vos prospects, contrats et conversions." />;
         case 'Développeur Web':
-            return <DashboardSection icon={<Code />} title="Developer Desk" description="Manage web projects and resolve tickets." />;
+            return <DashboardSection icon={<Code />} title="Bureau du Développeur" description="Gérez les projets web et résolvez les tickets." />;
         case 'Project Manager':
-             return <DashboardSection icon={<UserCheck />} title="PM Overview" description="Manage your projects, teams, and billing." />;
+             return <DashboardSection icon={<UserCheck />} title="Vue d'ensemble Chef de Projet" description="Gérez vos projets, équipes et facturation." />;
         default:
-            return <DashboardSection icon={<Star />} title="Employee Hub" description="Here are your projects and tasks." />;
+            return <DashboardSection icon={<Star />} title="Portail Employé" description="Voici vos projets et tâches." />;
     }
 };
 
@@ -132,8 +147,9 @@ const DashboardSection: React.FC<{ icon: React.ReactElement<{ className?: string
         </div>
         
         <div>
-            <h2 className="text-2xl font-bold text-foreground mb-4">Your In-Progress Projects</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-4">Vos Projets en Cours</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* FIX: Call .filter on the resolved array from state */}
                 {allProjects.filter(p => p.status === 'in_progress').map(project => (
                     <motion.div key={project.id} whileHover={{ y: -5 }}>
                         <ProjectCard project={project} />
@@ -154,8 +170,8 @@ const Dashboard: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
     >
-        <h1 className="text-3xl font-bold text-foreground">Welcome back, {user.name}! 👋</h1>
-        <p className="mt-1 text-muted-foreground">Here's a look at what's happening today.</p>
+        <h1 className="text-3xl font-bold text-foreground">Bon retour, {user.name} ! 👋</h1>
+        <p className="mt-1 text-muted-foreground">Voici un aperçu de ce qui se passe aujourd'hui.</p>
 
         <div className="mt-8">
             {user.jobTitle === 'Designer' ? <DesignerDashboard user={user} /> : <GenericDashboard user={user} />}

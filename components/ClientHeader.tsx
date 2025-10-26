@@ -1,20 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
 import { LogOut } from 'lucide-react';
 import Button from './ui/Button';
 import TelyaLogo from './TelyaLogo';
+import { supabase, getLocalUser } from '../lib/supabaseClient';
 
 const ClientHeader: React.FC = () => {
   const navigate = useNavigate();
-  const user: User | null = JSON.parse(localStorage.getItem('telya_user') || 'null');
+  const [user, setUser] = useState<User | null>(null);
 
-  const handleLogout = () => {
-    localStorage.removeItem('telya_token');
+  useEffect(() => {
+    setUser(getLocalUser());
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem('telya_user');
     navigate('/login');
   };
-
+  
   return (
     <header className="flex items-center justify-between h-20 px-6 md:px-10 bg-card border-b border-border">
       <div className="flex items-center space-x-4">
