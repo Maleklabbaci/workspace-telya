@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 // FIX: Correct import for react-router-dom hooks and components.
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -155,17 +156,17 @@ const DeliverableReview: React.FC = () => {
                 <ArrowLeft className="w-4 h-4 mr-2" /> Retour
             </Link>
 
-            <header className="mb-6 flex justify-between items-start flex-wrap gap-4">
+            <header className="mb-6 flex flex-col sm:flex-row justify-between sm:items-start gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground">{deliverable.title}</h1>
                     <p className="text-muted-foreground">Version {deliverable.version} pour le projet "{project.title}"</p>
                 </div>
                 {currentUser?.role === 'client' && ['in_review', 'revision_needed'].includes(deliverable.status) && (
-                    <div className="flex space-x-3">
-                        <Button onClick={handleRequestRevision} disabled={isSubmitting} variant="secondary">
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                        <Button onClick={handleRequestRevision} disabled={isSubmitting} variant="secondary" className="w-full sm:w-auto">
                             <Edit className="w-4 h-4 mr-2"/> Demander une révision
                         </Button>
-                        <Button onClick={handleApprove} disabled={isSubmitting} variant="primary" className="!bg-green-600 hover:!bg-green-700">
+                        <Button onClick={handleApprove} disabled={isSubmitting} variant="primary" className="!bg-green-600 hover:!bg-green-700 w-full sm:w-auto">
                             <CheckCircle className="w-4 h-4 mr-2"/> Approuver
                         </Button>
                     </div>

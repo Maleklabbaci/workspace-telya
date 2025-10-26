@@ -36,17 +36,19 @@ const ProjectsList: React.FC = () => {
           <Button onClick={() => setIsModalOpen(true)}>+ Nouveau Projet</Button>
         </div>
         
-        <div className="flex space-x-2 border-b border-border mb-6 overflow-x-auto">
-          <button onClick={() => setFilter('all')} className={`py-2 px-4 text-sm font-medium transition-colors whitespace-nowrap ${filter === 'all' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>Tous</button>
-          {statuses.map(status => (
-            <button 
-              key={status} 
-              onClick={() => setFilter(status)}
-              className={`py-2 px-4 text-sm font-medium capitalize transition-colors whitespace-nowrap ${filter === status ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              {status.replace(/_/g, ' ')}
-            </button>
-          ))}
+        <div className="border-b border-border mb-6">
+          <div className="flex space-x-2 overflow-x-auto pb-2">
+            <button onClick={() => setFilter('all')} className={`py-2 px-4 text-sm font-medium transition-colors whitespace-nowrap ${filter === 'all' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>Tous</button>
+            {statuses.map(status => (
+              <button 
+                key={status} 
+                onClick={() => setFilter(status)}
+                className={`py-2 px-4 text-sm font-medium capitalize transition-colors whitespace-nowrap ${filter === status ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {status.replace(/_/g, ' ')}
+              </button>
+            ))}
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

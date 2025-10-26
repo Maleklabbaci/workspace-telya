@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -73,7 +74,7 @@ const AdminAllProjects: React.FC = () => {
   return (
     <>
       <div>
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
             <div>
                 <h1 className="text-3xl font-bold text-foreground">Tous les Projets</h1>
                 <p className="mt-1 text-muted-foreground">Un aperçu complet de chaque projet de l'agence.</p>
@@ -83,23 +84,23 @@ const AdminAllProjects: React.FC = () => {
             </Button>
         </div>
         
-        <Card>
-            <div className="flex justify-end mb-4">
-                <div className="relative">
+        <Card className="!p-0 overflow-hidden">
+            <div className="p-4 sm:p-6 flex justify-start sm:justify-end">
+                <div className="relative w-full sm:w-auto">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input 
                         type="text"
                         placeholder="Rechercher par titre ou client..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-64 pl-10 pr-4 py-2 border border-border bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="w-full sm:w-64 pl-10 pr-4 py-2 border border-border bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                 </div>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="w-full text-left min-w-[900px]">
                     <thead>
-                        <tr className="text-xs text-muted-foreground uppercase border-b border-border">
+                        <tr className="text-xs text-muted-foreground uppercase border-b border-t border-border bg-secondary/50">
                             <th className="py-3 px-4 font-semibold">Titre du Projet</th>
                             <th className="py-3 px-4 font-semibold">Client</th>
                             <th className="py-3 px-4 font-semibold">Statut</th>
@@ -118,8 +119,11 @@ const AdminAllProjects: React.FC = () => {
                                 <td className="py-3 px-4 capitalize">{project.status.replace('_', ' ')}</td>
                                 <td className="py-3 px-4">{dayjs(project.due_date).format('DD MMM YYYY')}</td>
                                 <td className="py-3 px-4">
-                                    <div className="w-full bg-secondary rounded-full h-2.5">
-                                        <div className="bg-primary h-2.5 rounded-full" style={{ width: `${project.percent_complete}%` }}></div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-full bg-secondary rounded-full h-2.5">
+                                            <div className="bg-primary h-2.5 rounded-full" style={{ width: `${project.percent_complete}%` }}></div>
+                                        </div>
+                                        <span className="text-sm font-semibold text-muted-foreground w-12 text-right">{project.percent_complete}%</span>
                                     </div>
                                 </td>
                                 <td className="py-3 px-4">

@@ -131,7 +131,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     </div>
                      <div className="overflow-x-auto">
-                        <table className="w-full text-left">
+                        <table className="w-full text-left min-w-[800px]">
                             <thead>
                                 <tr className="text-xs text-muted-foreground uppercase border-b border-border">
                                     <th className="py-2 px-6 font-bold">Titre du Projet</th>

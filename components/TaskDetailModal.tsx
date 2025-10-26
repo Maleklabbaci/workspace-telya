@@ -65,9 +65,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               <X className="w-6 h-6 text-muted-foreground" />
           </button>
       </div>
-      <div className="flex-1 overflow-y-auto p-6 grid grid-cols-3 gap-8">
-        {/* Right Column for Content */}
-        <div className="col-span-3 md:col-span-2 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Main Content Column */}
+        <div className="md:col-span-2 space-y-6">
           <Input 
             value={editableTask.title}
             onChange={(e) => handleInputChange('title', e.target.value)}
@@ -115,8 +115,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Left Column for Metadata */}
-        <div className="col-span-3 md:col-span-1 space-y-6">
+        {/* Metadata Column */}
+        <div className="md:col-span-1 space-y-6">
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-2">Statut</h4>
               <Select 

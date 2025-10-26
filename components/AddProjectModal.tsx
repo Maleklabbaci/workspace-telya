@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { Project, User, ProjectStatus } from '../types';
 import Modal from './ui/Modal';
@@ -128,7 +129,7 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
                             <option key={client.id} value={client.id}>{client.company}</option>
                         ))}
                     </Select>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Select label="Pack" name="pack" value={formState.pack} onChange={handleInputChange}>
                             <option value="Essai">Essai</option>
                             <option value="Standard">Standard</option>
@@ -143,7 +144,7 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
                             <option value="archived">Archivé</option>
                          </Select>
                     </div>
-                     <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Input type="date" label="Date de début" name="start_date" value={formState.start_date} onChange={handleInputChange} required />
                         <Input type="date" label="Date de fin" name="due_date" value={formState.due_date} onChange={handleInputChange} required />
                     </div>

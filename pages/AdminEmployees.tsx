@@ -66,7 +66,7 @@ const AdminEmployees: React.FC = () => {
   return (
     <>
       <div>
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
             <div>
                 <h1 className="text-3xl font-bold text-foreground">Gérer les Employés</h1>
                 <p className="mt-1 text-muted-foreground">Voir, ajouter ou modifier les comptes et les rôles des employés.</p>
@@ -76,11 +76,11 @@ const AdminEmployees: React.FC = () => {
             </Button>
         </div>
 
-        <Card>
+        <Card className="!p-0 overflow-hidden">
           <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left min-w-[800px]">
                   <thead>
-                      <tr className="text-xs text-muted-foreground uppercase border-b border-border">
+                      <tr className="text-xs text-muted-foreground uppercase border-b border-border bg-secondary/50">
                           <th className="py-3 px-4 font-semibold">Nom</th>
                           <th className="py-3 px-4 font-semibold">Rôle</th>
                           <th className="py-3 px-4 font-semibold">Email</th>
