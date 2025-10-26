@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -35,8 +36,12 @@ const AdminEmployees: React.FC = () => {
 
     const handleDelete = async (userId: string) => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.')) {
-            await deleteUser(userId);
-            loadData();
+            try {
+                await deleteUser(userId);
+                loadData();
+            } catch (error: any) {
+                alert(`Erreur lors de la suppression : ${error.message}`);
+            }
         }
     };
     

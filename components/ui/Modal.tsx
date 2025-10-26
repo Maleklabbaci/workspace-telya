@@ -17,9 +17,13 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, className = ''
     };
     if (isOpen) {
       window.addEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
     return () => {
       window.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = '';
     };
   }, [isOpen, onClose]);
 
@@ -27,7 +31,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, className = ''
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 bg-black/60 z-40 flex justify-center items-center backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 z-40 flex justify-center items-center"
           onClick={onClose}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -36,12 +40,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, className = ''
           aria-modal="true"
         >
           <motion.div
-            className={`bg-card rounded-2xl shadow-xl transform transition-all m-4 border border-border ${className}`}
+            className={`bg-card rounded-2xl transform transition-all m-4 border border-border shadow-2xl shadow-black/30 backdrop-blur-lg ${className}`}
             onClick={(e) => e.stopPropagation()}
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ duration: 0.2 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
             {children}
           </motion.div>

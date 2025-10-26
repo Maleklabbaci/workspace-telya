@@ -1,11 +1,12 @@
-
 import React, { useState } from 'react';
+// FIX: Correct import for react-router-dom useNavigate hook.
 import { useNavigate } from 'react-router-dom';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
 import TelyaLogo from '../components/TelyaLogo';
 import { supabase } from '../lib/supabaseClient';
+import Card from '../components/ui/Card';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -76,14 +77,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-md z-10">
             <div className="text-center mb-8">
                 <TelyaLogo className="text-primary mx-auto" />
-                <p className="text-muted-foreground mt-2">Quand le Luxe rencontre la Précision Numérique.</p>
+                <p className="text-muted-foreground mt-2 font-semibold">Where Luxury Meets Digital Precision.</p>
             </div>
-            <div className="bg-card p-8 rounded-2xl shadow-lg border border-border">
-                <h2 className="text-2xl font-semibold mb-6 text-center text-foreground">Bon retour</h2>
+            <Card className="p-8">
+                <h2 className="text-2xl font-bold mb-6 text-center text-foreground">Entrez dans votre univers Telya</h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <Input
                         id="email"
@@ -103,15 +104,15 @@ export default function Login() {
                         placeholder="••••••••"
                         required
                     />
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
-                    <Button type="submit" className="w-full py-3" disabled={loading}>
+                    {error && <p className="text-red-500 text-sm font-semibold">{error}</p>}
+                    <Button type="submit" className="w-full !py-3" disabled={loading}>
                         {loading ? <Spinner /> : 'Se connecter'}
                     </Button>
                 </form>
                 <p className="text-center text-sm text-muted-foreground mt-6">
-                    Pour tout nouvel accès, veuillez contacter votre administrateur.
+                    L’accès est réservé aux membres approuvés par la direction.
                 </p>
-            </div>
+            </Card>
         </div>
     </div>
   );

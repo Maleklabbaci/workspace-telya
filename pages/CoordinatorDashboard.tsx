@@ -1,9 +1,11 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { User, Task, Project } from '../types';
 import Card from '../components/ui/Card';
 import { getProjects, getTasks, getUsers, updateTask, createNotification } from '../data/api';
 import { FolderKanban, ClipboardCheck, MessageSquare, Users } from 'lucide-react';
+// FIX: Correct import for react-router-dom Link component.
 import { Link } from 'react-router-dom';
 import CoordinatorTaskCard from '../components/CoordinatorTaskCard';
 

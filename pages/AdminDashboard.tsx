@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { User, Project, ProjectStatus, Invoice, Deliverable } from '../types';
 import Card from '../components/ui/Card';
@@ -7,37 +5,33 @@ import { Users, FolderKanban, Wallet, ClipboardCheck, PlusCircle, UserPlus, File
 import Button from '../components/ui/Button';
 import { getDeliverables, getProjects, getUsers, getInvoices } from '../data/api';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/fr';
 import AddUserModal from '../components/AddUserModal';
 import AddProjectModal from '../components/AddProjectModal';
+// FIX: Correct import for react-router-dom useNavigate hook.
 import { useNavigate } from 'react-router-dom';
-
-dayjs.extend(relativeTime);
-dayjs.locale('fr');
 
 
 const statusStyles: { [key in Project['status']]: string } = {
   draft: 'bg-secondary text-secondary-foreground',
-  active: 'bg-blue-500/10 text-blue-500',
-  in_progress: 'bg-yellow-500/10 text-yellow-500',
-  completed: 'bg-green-500/10 text-green-500',
+  active: 'bg-blue-500/20 text-blue-300',
+  in_progress: 'bg-yellow-500/20 text-yellow-300',
+  completed: 'bg-green-500/20 text-green-300',
   archived: 'bg-secondary text-muted-foreground',
-  'en préparation': 'bg-purple-500/10 text-purple-500',
-  'en tournage': 'bg-blue-500/10 text-blue-500',
-  'en montage': 'bg-yellow-500/10 text-yellow-500',
-  'livré': 'bg-green-500/10 text-green-500',
+  'en préparation': 'bg-purple-500/20 text-purple-300',
+  'en tournage': 'bg-blue-500/20 text-blue-300',
+  'en montage': 'bg-yellow-500/20 text-yellow-300',
+  'livré': 'bg-green-500/20 text-green-300',
 };
 
 const MetricCard: React.FC<{ icon: React.ReactElement<{ className?: string }>; title: string; value: string | number; iconBg: string; iconColor: string; }> = ({ icon, title, value, iconBg, iconColor }) => (
     <Card>
         <div className="flex items-center">
-            <div className={`p-3 ${iconBg} rounded-full`}>
+            <div className={`p-3 ${iconBg} rounded-lg border border-border`}>
                 {React.cloneElement(icon, { className: `w-6 h-6 ${iconColor}`})}
             </div>
             <div className="ml-4">
-                <h3 className="text-muted-foreground font-semibold text-sm">{title}</h3>
-                <p className="text-2xl font-bold text-foreground">{value}</p>
+                <h3 className="text-muted-foreground font-bold text-sm uppercase tracking-wider">{title}</h3>
+                <p className="text-3xl font-extrabold text-foreground">{value}</p>
             </div>
         </div>
     </Card>
@@ -114,47 +108,49 @@ const AdminDashboard: React.FC = () => {
             <p className="mt-1 text-muted-foreground">Bienvenue, {user.name}. Voici un aperçu de l'agence.</p>
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <MetricCard icon={<Users />} title="Clients Actifs" value={stats.totalClients} iconBg="bg-blue-500/10" iconColor="text-blue-500" />
-                 <MetricCard icon={<FolderKanban />} title="Projets Actifs" value={stats.activeProjects} iconBg="bg-green-500/10" iconColor="text-green-500" />
-                 <MetricCard icon={<ClipboardCheck />} title="Validations en Attente" value={stats.pendingReviews} iconBg="bg-yellow-500/10" iconColor="text-yellow-500" />
-                 <MetricCard icon={<Wallet />} title="Revenu (Mois)" value={new Intl.NumberFormat('fr-DZ', { style: 'currency', currency: 'DZD' }).format(stats.monthlyRevenue)} iconBg="bg-primary/10" iconColor="text-primary" />
+                 <MetricCard icon={<Users />} title="Clients Actifs" value={stats.totalClients} iconBg="bg-blue-500/20" iconColor="text-blue-300" />
+                 <MetricCard icon={<FolderKanban />} title="Projets Actifs" value={stats.activeProjects} iconBg="bg-green-500/20" iconColor="text-green-300" />
+                 <MetricCard icon={<ClipboardCheck />} title="Validations" value={stats.pendingReviews} iconBg="bg-yellow-500/20" iconColor="text-yellow-300" />
+                 <MetricCard icon={<Wallet />} title="Revenu (Mois)" value={new Intl.NumberFormat('fr-DZ', { style: 'currency', currency: 'DZD' }).format(stats.monthlyRevenue)} iconBg="bg-primary/20" iconColor="text-primary" />
             </div>
 
             <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-2">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-foreground">Projets Récents</h2>
-                        <div className="flex items-center space-x-2">
-                            <Filter className="w-4 h-4 text-muted-foreground" />
-                            <select onChange={(e) => setProjectFilter(e.target.value as any)} value={projectFilter} className="bg-transparent text-sm font-semibold text-muted-foreground focus:outline-none appearance-none">
-                                <option value="all">Tous les statuts</option>
-                                <option value="in_progress">En cours</option>
-                                <option value="active">Actif</option>
-                                <option value="completed">Terminé</option>
-                            </select>
+                <Card className="lg:col-span-2 !p-0 overflow-hidden">
+                    <div className="p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-foreground">Projets Récents</h2>
+                            <div className="flex items-center space-x-2">
+                                <Filter className="w-4 h-4 text-muted-foreground" />
+                                <select onChange={(e) => setProjectFilter(e.target.value as any)} value={projectFilter} className="bg-transparent text-sm font-semibold text-muted-foreground focus:outline-none appearance-none">
+                                    <option value="all">Tous les statuts</option>
+                                    <option value="in_progress">En cours</option>
+                                    <option value="active">Actif</option>
+                                    <option value="completed">Terminé</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                      <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="text-xs text-muted-foreground uppercase border-b border-border">
-                                    <th className="py-2 px-4 font-semibold">Titre du Projet</th>
-                                    <th className="py-2 px-4 font-semibold">Client</th>
-                                    <th className="py-2 px-4 font-semibold">Statut</th>
-                                    <th className="py-2 px-4 font-semibold">Échéance</th>
+                                    <th className="py-2 px-6 font-bold">Titre du Projet</th>
+                                    <th className="py-2 px-6 font-bold">Client</th>
+                                    <th className="py-2 px-6 font-bold">Statut</th>
+                                    <th className="py-2 px-6 font-bold">Échéance</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {recentProjects.map(project => (
                                     <tr key={project.id} onClick={() => navigate(`/projects/${project.id}`)} className="border-b border-border last:border-b-0 hover:bg-accent cursor-pointer">
-                                        <td className="py-3 px-4 font-semibold text-foreground">{project.title}</td>
-                                        <td className="py-3 px-4">{getClientName(project.client_id)}</td>
-                                        <td className="py-3 px-4">
-                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${statusStyles[project.status]}`}>
+                                        <td className="py-3 px-6 font-bold text-foreground">{project.title}</td>
+                                        <td className="py-3 px-6 font-semibold text-muted-foreground">{getClientName(project.client_id)}</td>
+                                        <td className="py-3 px-6">
+                                            <span className={`px-2 py-1 text-xs font-bold rounded-full capitalize ${statusStyles[project.status]}`}>
                                                 {project.status.replace('_', ' ')}
                                             </span>
                                         </td>
-                                        <td className="py-3 px-4">{dayjs(project.due_date).format('DD MMM YYYY')}</td>
+                                        <td className="py-3 px-6 font-semibold text-muted-foreground">{dayjs(project.due_date).format('DD MMM YYYY')}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -188,22 +184,22 @@ const AdminDashboard: React.FC = () => {
                                 
                                 return (
                                      <li key={index} className="flex items-start text-sm">
-                                        <div className="p-2 bg-secondary rounded-full mr-3 mt-1">
+                                        <div className="p-2 bg-secondary rounded-lg border border-border mr-3 mt-1">
                                             {isProject ? <PlusCircle className="w-4 h-4 text-primary"/> : <Zap className="w-4 h-4 text-primary"/>}
                                         </div>
                                         <div>
-                                            <p className="text-foreground">
+                                            <p className="text-foreground font-semibold">
                                                 {isProject ? (
                                                     <>
-                                                        Nouveau projet <span className="font-semibold">{item.title}</span> créé pour <span className="font-semibold">{client?.company || 'N/A'}</span>.
+                                                        Nouveau projet <span className="font-extrabold">{item.title}</span> pour <span className="font-extrabold">{client?.company || 'N/A'}</span>.
                                                     </>
                                                 ) : (
                                                     <>
-                                                        Nouveau livrable <span className="font-semibold">{item.title}</span> téléversé pour <span className="font-semibold">{project?.title || 'N/A'}</span>.
+                                                        Nouveau livrable <span className="font-extrabold">{item.title}</span> pour <span className="font-extrabold">{project?.title || 'N/A'}</span>.
                                                     </>
                                                 )}
                                             </p>
-                                            <p className="text-xs text-muted-foreground">{dayjs(isProject ? (item as Project).start_date : (item as Deliverable).uploaded_at).fromNow()}</p>
+                                            <p className="text-xs text-muted-foreground font-bold">{dayjs(isProject ? (item as Project).start_date : (item as Deliverable).uploaded_at).fromNow()}</p>
                                         </div>
                                      </li>
                                 );

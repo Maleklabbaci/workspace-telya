@@ -1,5 +1,8 @@
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
+// FIX: Correct import for react-router-dom hooks and components.
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Deliverable, DeliverableComment, User, Project } from '../types';
 import { getLocalUser, supabase } from '../lib/supabaseClient';
@@ -10,11 +13,6 @@ import Button from '../components/ui/Button';
 import Textarea from '../components/ui/Textarea';
 import { ArrowLeft, Send, Download, Edit, CheckCircle } from 'lucide-react';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/fr';
-
-dayjs.extend(relativeTime);
-dayjs.locale('fr');
 
 const DeliverableReview: React.FC = () => {
     const { projectId, deliverableId } = useParams<{ projectId: string, deliverableId: string }>();

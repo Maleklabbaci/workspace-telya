@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// FIX: Correct import for react-router-dom NavLink component.
 import { NavLink } from 'react-router-dom';
 import { Home, Folder, CheckSquare, DollarSign, Users, Shield, Briefcase, Settings, LayoutGrid, ClipboardCheck, User as UserIcon } from 'lucide-react';
 import { User } from '../types';
@@ -50,12 +51,12 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <div className="hidden md:flex flex-col w-64 bg-card text-card-foreground border-r border-border">
+    <div className="hidden md:flex flex-col w-64 bg-card text-card-foreground border-r border-border backdrop-blur-lg">
       <div className="flex items-center justify-center h-20 border-b border-border px-6">
         <TelyaLogo className="text-primary" />
       </div>
-      <div className="flex-1 flex flex-col justify-between px-4 py-6">
-        <nav>
+      <div className="flex-1 flex flex-col justify-between p-4">
+        <nav className="space-y-1">
             {accessibleMainItems.map((item) => {
               const Icon = icons[item.icon as keyof typeof icons] || Home;
               return (
@@ -64,17 +65,17 @@ const Sidebar: React.FC = () => {
                 to={item.to}
                 end={item.to.endsWith('dashboard')}
                 className={({ isActive }) =>
-                  `flex items-center px-4 py-3 my-1 rounded-lg transition-colors duration-200 ${
-                    isActive ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  `flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-bold ${
+                    isActive ? 'bg-white/10 text-foreground' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
                   }`
                 }
               >
                 <Icon className="h-5 w-5 mr-3" />
-                <span className="font-medium">{item.label}</span>
+                <span>{item.label}</span>
               </NavLink>
             )})}
         </nav>
-        <nav>
+        <nav className="space-y-1">
             {accessibleBottomItems.map((item) => {
               const Icon = icons[item.icon as keyof typeof icons] || Home;
               return (
@@ -82,13 +83,13 @@ const Sidebar: React.FC = () => {
                 key={item.label + item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex items-center px-4 py-3 my-1 rounded-lg transition-colors duration-200 ${
-                    isActive ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  `flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-bold ${
+                    isActive ? 'bg-white/10 text-foreground' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
                   }`
                 }
               >
                 <Icon className="h-5 w-5 mr-3" />
-                <span className="font-medium">{item.label}</span>
+                <span>{item.label}</span>
               </NavLink>
             )})}
         </nav>

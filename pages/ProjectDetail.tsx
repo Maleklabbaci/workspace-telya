@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
+// FIX: Correct import for react-router-dom useParams hook.
 import { useParams } from 'react-router-dom';
 import { Project, Task, Deliverable, Comment, User, TaskComment } from '../types';
 import Spinner from '../components/ui/Spinner';
@@ -9,10 +9,11 @@ import DeliverableCard from '../components/DeliverableCard';
 import TaskDetailModal from '../components/TaskDetailModal';
 import UploadDeliverableModal from '../components/UploadDeliverableModal';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/fr';
 import { Clock, BarChart2, Users } from 'lucide-react';
 import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+// FIX: Import missing Textarea component.
+import Textarea from '../components/ui/Textarea';
 import { 
   getProjectById,
   getTasks,
@@ -29,17 +30,14 @@ import {
 } from '../data/api';
 
 
-dayjs.extend(relativeTime);
-dayjs.locale('fr');
-
 // Tab Components
 const OverviewTab: React.FC<{ project: Project; client: User | undefined }> = ({ project, client }) => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div className="md:col-span-2 bg-card p-6 rounded-xl shadow-sm border border-border">
+    <Card className="md:col-span-2">
       <h3 className="font-bold text-lg mb-4 text-card-foreground">Description du Projet</h3>
       <p className="text-muted-foreground">{project.description}</p>
-    </div>
-    <div className="bg-card p-6 rounded-xl shadow-sm border border-border space-y-4">
+    </Card>
+    <Card className="space-y-4">
       <h3 className="font-bold text-lg mb-2 text-card-foreground">Détails</h3>
       <div className="flex items-center text-foreground">
         <Users className="w-5 h-5 mr-3 text-muted-foreground" />
@@ -62,12 +60,12 @@ const OverviewTab: React.FC<{ project: Project; client: User | undefined }> = ({
             <p className="font-semibold">{project.percent_complete}%</p>
         </div>
       </div>
-    </div>
+    </Card>
   </div>
 );
 
 const TasksTab: React.FC<{ tasks: Task[], projectMembers: User[], onAssignTask: (taskId: string, userId: string | null) => void, onSelectTask: (task: Task) => void }> = ({ tasks, projectMembers, onAssignTask, onSelectTask }) => (
-  <div className="flex space-x-4 overflow-x-auto pb-4 -m-6 p-6">
+  <div className="flex space-x-4 overflow-x-auto pb-4">
     <TaskColumn title="À Faire" status="todo" tasks={tasks.filter(t => t.status === 'todo')} projectMembers={projectMembers} onAssignTask={onAssignTask} onSelectTask={onSelectTask} />
     <TaskColumn title="En Cours" status="in_progress" tasks={tasks.filter(t => t.status === 'in_progress')} projectMembers={projectMembers} onAssignTask={onAssignTask} onSelectTask={onSelectTask} />
     <TaskColumn title="En Revue" status="review" tasks={tasks.filter(t => t.status === 'review')} projectMembers={projectMembers} onAssignTask={onAssignTask} onSelectTask={onSelectTask} />
@@ -99,7 +97,7 @@ const ChatTab: React.FC<{ comments: Comment[], currentUser: User, onAddComment: 
     
     return (
         <div className="max-w-3xl mx-auto">
-            <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
+            <Card>
                 <h3 className="font-bold text-lg mb-4 text-card-foreground">Conversation</h3>
                 <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
                     {comments.map(comment => (
@@ -109,7 +107,7 @@ const ChatTab: React.FC<{ comments: Comment[], currentUser: User, onAddComment: 
                                 <div className="flex items-baseline space-x-2">
                                     <p className="font-semibold text-foreground">{comment.user_name}</p>
                                     <p className="text-xs text-muted-foreground">{dayjs(comment.created_at).fromNow()}</p>
-                                    {comment.visibility === 'internal' && <span className="px-2 py-0.5 text-xs bg-yellow-500/10 text-yellow-600 rounded-full">Interne</span>}
+                                    {comment.visibility === 'internal' && <span className="px-2 py-0.5 text-xs bg-yellow-500/20 text-yellow-300 rounded-full">Interne</span>}
                                 </div>
                                 <div className="mt-1 bg-secondary p-3 rounded-lg rounded-tl-none">
                                     <p className="text-secondary-foreground">{comment.content}</p>
@@ -122,20 +120,19 @@ const ChatTab: React.FC<{ comments: Comment[], currentUser: User, onAddComment: 
                      <div className="flex items-start space-x-4">
                         <img src={currentUser.avatar_url || `https://i.pravatar.cc/150?u=${currentUser.id}`} alt="Current User" className="w-10 h-10 rounded-full" />
                         <div className="flex-1">
-                            <textarea 
+                            <Textarea 
                                 rows={3} 
                                 placeholder="Écrire un commentaire..." 
-                                className="w-full p-2 border border-border bg-background rounded-lg focus:ring-2 focus:ring-ring"
                                 value={newComment}
                                 onChange={(e) => setNewComment(e.target.value)}
-                            ></textarea>
+                            />
                             <div className="flex justify-end mt-2">
                                  <Button onClick={handleSend}>Envoyer</Button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </Card>
         </div>
     );
 };
@@ -165,19 +162,14 @@ const ProjectDetail: React.FC = () => {
         setClient(allUsers.find(u => u.id === projectData.client_id));
         setProjectMembers(allUsers.filter(u => u.role !== 'client'));
 
-        const allTasks = await getTasks();
-        const projectTasks = allTasks.filter(t => t.project_id === id);
+        const projectTasks = await getTasks({ projectId: id });
         setTasks(projectTasks);
         
-        const allDeliverables = await getDeliverables();
-        setDeliverables(allDeliverables.filter(d => d.project_id === id));
+        setDeliverables(await getDeliverables({ projectId: id }));
+        setComments(await getComments(id));
         
-        const allComments = await getComments();
-        setComments(allComments.filter(c => c.project_id === id));
-        
-        const allTaskComments = await getTaskComments();
-        const projectTaskIds = new Set(projectTasks.map(t => t.id));
-        setTaskComments(allTaskComments.filter(c => projectTaskIds.has(c.task_id)));
+        const projectTaskIds = projectTasks.map(t => t.id);
+        setTaskComments(await getTaskComments(projectTaskIds));
     }
   }, [id]);
 
@@ -284,7 +276,7 @@ const ProjectDetail: React.FC = () => {
     { label: 'Tâches', content: <TasksTab tasks={tasks} projectMembers={projectMembers} onAssignTask={handleAssignTask} onSelectTask={handleSelectTask} /> },
     { label: 'Livrables', content: <DeliverablesTab deliverables={deliverables} onUploadClick={() => setIsUploadModalOpen(true)} /> },
     { label: 'Conversation', content: <ChatTab comments={comments} currentUser={currentUser} onAddComment={handleAddProjectComment} /> },
-    { label: 'Facturation', content: <div>Les informations de facturation et les factures seront affichées ici.</div> },
+    { label: 'Facturation', content: <Card>Les informations de facturation et les factures seront affichées ici.</Card> },
   ];
 
   return (

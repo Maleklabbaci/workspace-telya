@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { User, Project, Task, Deliverable } from '../types';
 import Button from '../components/ui/Button';
@@ -23,15 +24,21 @@ const ClientDashboard: React.FC = () => {
     const [showToast, setShowToast] = useState(false);
 
     const loadClientData = async (currentUser: User) => {
-        const allProjects = await getProjects();
-        const clientProjects = allProjects.filter(p => p.client_id === currentUser.id);
+        const clientProjects = await getProjects({ clientId: currentUser.id });
         setProjects(clientProjects);
         
-        const clientProjectIds = new Set(clientProjects.map(p => p.id));
-        const allTasks = await getTasks();
-        setTasks(allTasks.filter(t => clientProjectIds.has(t.project_id)));
-        const allDeliverables = await getDeliverables();
-        setDeliverables(allDeliverables.filter(d => clientProjectIds.has(d.project_id)));
+        if (clientProjects.length > 0) {
+            const clientProjectIds = clientProjects.map(p => p.id);
+            const [clientTasks, clientDeliverables] = await Promise.all([
+                getTasks({ projectIds: clientProjectIds }),
+                getDeliverables({ projectIds: clientProjectIds })
+            ]);
+            setTasks(clientTasks);
+            setDeliverables(clientDeliverables);
+        } else {
+            setTasks([]);
+            setDeliverables([]);
+        }
     };
 
     useEffect(() => {

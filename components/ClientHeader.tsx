@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// FIX: Correct import for react-router-dom useNavigate hook.
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
 import { LogOut } from 'lucide-react';

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Project, User, ProjectStatus } from '../types';
 import Modal from './ui/Modal';
@@ -93,12 +94,7 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
                 const updates = { ...formState };
                 await updateProject(projectToEdit.id, updates);
             } else {
-                const newProjectData = {
-                    ...formState,
-                    percent_complete: 0,
-                    updated_at: new Date().toISOString(),
-                };
-                await createProject(newProjectData);
+                await createProject(formState);
             }
             
             setShowToast(true);
@@ -145,7 +141,7 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onPr
                             <option value="in_progress">En cours</option>
                             <option value="completed">Terminé</option>
                             <option value="archived">Archivé</option>
-                        </Select>
+                         </Select>
                     </div>
                      <div className="grid grid-cols-2 gap-4">
                         <Input type="date" label="Date de début" name="start_date" value={formState.start_date} onChange={handleInputChange} required />

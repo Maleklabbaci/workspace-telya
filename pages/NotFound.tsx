@@ -1,4 +1,5 @@
 import React from 'react';
+// FIX: Correct import for react-router-dom Link component.
 import { Link } from 'react-router-dom';
 import Button from '../components/ui/Button';
 

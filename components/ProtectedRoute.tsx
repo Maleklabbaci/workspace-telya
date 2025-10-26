@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// FIX: Correct import for react-router-dom components and hooks.
 import { Navigate, useLocation } from 'react-router-dom';
 import { User, UserRole } from '../types';
 import { supabase, getLocalUser } from '../lib/supabaseClient';

@@ -1,5 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+
+
+import React, { useState, useEffect, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AddProjectModal from '../components/AddProjectModal';
@@ -7,6 +9,7 @@ import { Project, User } from '../types';
 import { getProjects, getUsers, deleteProject } from '../data/api';
 import { PlusCircle, Edit, Trash2, Search } from 'lucide-react';
 import dayjs from 'dayjs';
+// FIX: Correct import for react-router-dom Link component.
 import { Link } from 'react-router-dom';
 
 const AdminAllProjects: React.FC = () => {
@@ -25,6 +28,16 @@ const AdminAllProjects: React.FC = () => {
         loadData();
     }, []);
 
+    const clientMap = useMemo(() => {
+        const map = new Map<string, string>();
+        users.forEach(user => {
+            if (user.role === 'client') {
+                map.set(user.id, user.company || user.name);
+            }
+        });
+        return map;
+    }, [users]);
+
     const handleEdit = (project: Project) => {
         setEditingProject(project);
         setIsModalOpen(true);
@@ -32,8 +45,12 @@ const AdminAllProjects: React.FC = () => {
 
     const handleDelete = async (projectId: string) => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer ce projet ? Cela supprimera également les tâches associées et est irréversible.')) {
-            await deleteProject(projectId);
-            loadData();
+            try {
+                await deleteProject(projectId);
+                loadData();
+            } catch (error: any) {
+                alert(`Erreur lors de la suppression du projet : ${error.message}`);
+            }
         }
     };
     
@@ -47,12 +64,11 @@ const AdminAllProjects: React.FC = () => {
         handleModalClose();
     };
 
-    const getClientName = (clientId: string) => users.find(u => u.id === clientId)?.company || 'N/A';
-
-    const filteredProjects = projects.filter(p => 
-        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getClientName(p.client_id).toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredProjects = projects.filter(p => {
+        const clientName = clientMap.get(p.client_id) || '';
+        return p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               clientName.toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
   return (
     <>
@@ -98,7 +114,7 @@ const AdminAllProjects: React.FC = () => {
                                 <td className="py-3 px-4 font-semibold text-foreground">
                                     <Link to={`/projects/${project.id}`} className="hover:text-primary">{project.title}</Link>
                                 </td>
-                                <td className="py-3 px-4">{getClientName(project.client_id)}</td>
+                                <td className="py-3 px-4">{clientMap.get(project.client_id) || 'N/A'}</td>
                                 <td className="py-3 px-4 capitalize">{project.status.replace('_', ' ')}</td>
                                 <td className="py-3 px-4">{dayjs(project.due_date).format('DD MMM YYYY')}</td>
                                 <td className="py-3 px-4">

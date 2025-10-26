@@ -99,11 +99,6 @@ export interface Invoice {
   due_date: string;
 }
 
-export interface Message {
-    sender: 'user' | 'ai';
-    text: string;
-}
-
 export interface Notification {
   id: number;
   user_id: string; // The recipient

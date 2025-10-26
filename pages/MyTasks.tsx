@@ -1,5 +1,8 @@
 
+
+
 import React, { useState, useEffect } from 'react';
+// FIX: Correct import for react-router-dom Link component.
 import { Link } from 'react-router-dom';
 import { Task, User, Project, TaskStatus } from '../types';
 import Card from '../components/ui/Card';
@@ -46,14 +49,20 @@ const MyTasks: React.FC = () => {
     const currentUser: User | null = JSON.parse(localStorage.getItem('telya_user') || 'null');
     const [myTasks, setMyTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
+    const [projectMap, setProjectMap] = useState<Map<string, Project>>(new Map());
 
     useEffect(() => {
         const fetchData = async () => {
             if (currentUser) {
-                const allTasks = await getTasks();
-                setMyTasks(allTasks.filter(task => task.assigned_to === currentUser.id));
-                const allProjects = await getProjects();
-                setProjects(allProjects);
+                const assignedTasks = await getTasks({ assigneeId: currentUser.id });
+                setMyTasks(assignedTasks);
+                
+                if (assignedTasks.length > 0) {
+                    const projectIds = [...new Set(assignedTasks.map(task => task.project_id))];
+                    const relevantProjects = await getProjects({ projectIds });
+                    setProjects(relevantProjects);
+                    setProjectMap(new Map(relevantProjects.map(p => [p.id, p])));
+                }
             }
         };
         fetchData();
@@ -65,7 +74,7 @@ const MyTasks: React.FC = () => {
     }
 
     const getProjectForTask = (projectId: string) => {
-        return projects.find(p => p.id === projectId);
+        return projectMap.get(projectId);
     };
     
     const taskGroups: { [key in TaskStatus]?: Task[] } = {

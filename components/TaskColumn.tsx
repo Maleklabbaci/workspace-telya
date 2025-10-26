@@ -12,15 +12,15 @@ interface TaskColumnProps {
 }
 
 const statusColors = {
-  todo: 'border-gray-400 dark:border-gray-600',
-  in_progress: 'border-blue-500',
-  review: 'border-yellow-500',
-  done: 'border-green-500',
+  todo: 'border-gray-500',
+  in_progress: 'border-blue-400',
+  review: 'border-yellow-400',
+  done: 'border-green-400',
 };
 
 const TaskColumn: React.FC<TaskColumnProps> = ({ title, status, tasks, projectMembers, onAssignTask, onSelectTask }) => {
   return (
-    <div className="bg-muted/50 dark:bg-background rounded-lg p-3 flex-shrink-0 w-80">
+    <div className="bg-white/5 rounded-2xl p-3 flex-shrink-0 w-80">
       <div className={`flex justify-between items-center mb-4 pb-2 border-b-2 ${statusColors[status]}`}>
         <h3 className="font-semibold text-foreground">{title}</h3>
         <span className="bg-secondary text-secondary-foreground text-sm font-bold rounded-full px-2 py-0.5">

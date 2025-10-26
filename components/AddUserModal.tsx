@@ -8,7 +8,7 @@ import Select from './ui/Select';
 import Button from './ui/Button';
 import Toast from './ui/Toast';
 import { X } from 'lucide-react';
-import { updateUser } from '../data/api';
+import { updateUser, createUser } from '../data/api';
 import { supabase } from '../lib/supabaseClient';
 
 
@@ -87,17 +87,21 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
             const { data: authData, error: signUpError } = await supabase.auth.signUp({
                 email: email,
                 password: password,
-                options: {
-                    data: {
-                        name: name, // Pass name to be picked up by the handle_new_user trigger
-                    }
-                }
             });
             if (signUpError) throw signUpError;
             if (!authData.user) throw new Error("La création de l'utilisateur a échoué.");
+            
+            // 2. Call RPC to confirm email immediately, bypassing email confirmation flow
+            const { error: confirmError } = await supabase.rpc('confirm_user_email', { user_id_to_confirm: authData.user.id });
+            if (confirmError) {
+                console.error("Erreur critique lors de la confirmation de l'e-mail via RPC:", confirmError);
+                throw new Error(`La confirmation automatique a échoué: ${confirmError.message}. Assurez-vous que la fonction RPC 'confirm_user_email' est bien configurée.`);
+            }
 
-            // 2. Update the profile created by the trigger with full details
-            const profileUpdates: Partial<User> = {
+            // 3. Explicitly CREATE the profile in the public.profiles table
+            const newUserProfile: Partial<User> = {
+              id: authData.user.id,
+              email: authData.user.email,
               name,
               role,
               status: 'active',
@@ -106,7 +110,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onUserModi
               avatar_url: `https://i.pravatar.cc/150?u=${email}`
             };
 
-            await supabase.from('profiles').update(profileUpdates).eq('id', authData.user.id);
+            await createUser(newUserProfile);
         }
         
         setShowToast(true);

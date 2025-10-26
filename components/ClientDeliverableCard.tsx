@@ -1,9 +1,11 @@
 
+
 import React from 'react';
 import { Deliverable } from '../types';
 import { Paperclip, Download, CheckCircle, Clock, MessageSquare, Edit } from 'lucide-react';
 import dayjs from 'dayjs';
 import Button from './ui/Button';
+// FIX: Correct import for react-router-dom Link component.
 import { Link } from 'react-router-dom';
 
 interface ClientDeliverableCardProps {
